@@ -1,0 +1,5 @@
+face_recognition_writer:
+  ros__parameters:
+    topic: /fbot_vision/fr/face_recognition3d
+
+  

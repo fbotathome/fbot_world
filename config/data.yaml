@@ -1,0 +1,6 @@
+pose:
+  ros__parameters:
+    teste: teste
+    teste2:
+      valor: string
+      valor2: string2
