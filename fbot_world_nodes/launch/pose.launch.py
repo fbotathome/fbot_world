@@ -71,35 +71,16 @@ def generate_launch_description():
         'pose.yaml'
     )
 
-    config_file_path = os.path.join(get_package_share_directory('fbot_world'),
-        'config',
-        node_name + '.yaml'
-    )
-    
     data = MergeYamlFiles(config_launch_file_path,
-                    plugin_config_file_path,
-                    config_file_path, 
-                    node_name)
-
-    
-
-    config_file_arg = DeclareLaunchArgument(
-        'config',
-        default_value=config_file_path,
-        description='Path to the parameter file'
-    )
-
-    
-    print("O que tem no data: ", data)
-    
+                    plugin_config_file_path,)
 
     pose_node = Node(
         package='fbot_world',
         executable=node_name,
         name=node_name,
-        parameters=[LaunchConfiguration('config')],
+        parameters=[data],
     )
-    return LaunchDescription([IncludeLaunchDescription(
-        launch_arguments=data),
+    
+    return LaunchDescription([
         pose_node
     ])

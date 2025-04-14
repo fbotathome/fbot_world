@@ -27,12 +27,9 @@ class PosePlugin(WorldPlugin):
     super().__init__(nodeName=node_name)
 
     self.declareParameters_targets()
-    self.get_logger().info(f"Declaring parameters")
     self.locations = self.readParameters_targets()
-    self.get_logger().info(f"Targets: {self.locations}")
     self.declareParameters(self.locations)
     self.readParameters(self.locations)
-    self.get_logger().info(f"Targets: {self.targets}")
     self.setStaticPose()
     # self.closest_key_server = self.create_service(GetKey, '/fbot_world/get_closest_key', self.getClosestKey)
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
@@ -40,15 +37,10 @@ class PosePlugin(WorldPlugin):
     self.get_logger().info(f"Node started!!!")
 
   def readPose(self, key):
-    self.get_logger().info(f"Read Pose Key: {key}")
     pose = Pose()
-    self.get_logger().info(f"Reading pose from pose: {pose}")
-    self.get_logger().info(f"Reading pose from key: {key}")
-    #rclpy.logging.get_logger('pose_plugin').info("Reading pose from key: " + self.r.keys())
     db_pose = self.r.hgetall('target/'+key+'/'+'pose')
     self.get_logger().info(f"Reading pose from r: {self.r}")
     self.get_logger().info(f"Reading pose from db_pose: {db_pose}")
-    rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(db_pose))
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -75,7 +67,6 @@ class PosePlugin(WorldPlugin):
     '''
     Set the static pose of the robot in the database.'''
     poses = self.targets
-    self.get_logger().info(f"Setting static pose {poses}")
     with self.r.pipeline() as pipe:
       for p_id, pose in poses.items():
         key = 'target/' + p_id + '/' + 'pose'
@@ -122,26 +113,22 @@ class PosePlugin(WorldPlugin):
   #   return res
 
   def getPose(self, req : GetPose.Request, res : GetPose.Response):
-    #self.get_logger().info(f"Getting pose")
     key = req.key
-    self.get_logger().info(f"Getting pose {key}")
     res = GetPose.Response()
     pose = self.readPose(key)
     res.pose = pose
-    #rospy.loginfo(pose)
     rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(pose))
     size = self.readSize(key)
     res.size = size
-    #rospy.loginfo(size)
     rclpy.logging.get_logger('pose_plugin').info("Size: " + str(size))
-    #res = key
     return res
 
   def declareParameters_targets(self):
-    self.declare_parameter('lugares', rclpy.Parameter.Type.STRING_ARRAY)
+    self.declare_parameter('target', rclpy.Parameter.Type.STRING_ARRAY)
   
   def readParameters_targets(self):
-    return self.get_parameter('lugares').value
+    return self.get_parameter('target').value
+  
 
   def declareParameters(self, locations):
     self.locations = locations
@@ -159,7 +146,6 @@ class PosePlugin(WorldPlugin):
     self.locations = locations
     self.targets = {}
     for target in  range(len(self.locations)):
-      self.get_logger().info(f"Reading parameters {target}")
       self.targets.update({ self.locations[target]: {
         'px': self.get_parameter('targets.'+ str(self.locations[target]) +'.px').value,
         'py': self.get_parameter('targets.'+ str(self.locations[target]) +'.py').value,
