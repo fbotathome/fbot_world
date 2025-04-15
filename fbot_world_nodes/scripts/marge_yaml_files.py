@@ -1,6 +1,6 @@
 import yaml
 
-def MergeYamlFiles(file: str = None,
+def mergeYamlFiles(file: str = None,
                 plugin_file: str = None) -> dict:
     '''
     @brief Utility function to merge two ROS 2 YAML parameter files.
@@ -17,7 +17,6 @@ def MergeYamlFiles(file: str = None,
         file1 = file1[list(file1.keys())[0]]['ros__parameters']
         file2 = file2['plugin']['ros__parameters']
 
-        print (file1.get('targets').keys())
     def recursiveMerge(dict1: dict, dict2: dict) -> dict:
         '''
         @brief Recursive function to merge two dictionaries.

@@ -1,2 +1,2 @@
 from scripts.world_plugin import WorldPlugin
-from scripts.marge_yaml_files import MergeYamlFiles
+from scripts.marge_yaml_files import mergeYamlFiles
