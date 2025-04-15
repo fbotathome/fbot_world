@@ -1,0 +1,38 @@
+import yaml
+
+def MergeYamlFiles(file, plugin):
+    '''
+    @file merge_yaml.py
+    @brief Utility function to merge two ROS 2 YAML parameter files.
+
+    This script defines a function that reads two YAML files—one for the base configuration 
+    and one for a plugin—and merges their `ros__parameters`. It also extracts a list of target keys 
+    if available and injects them as a separate 'target' list.
+    '''
+    with open(file, 'r', encoding='utf-8') as f1, open(plugin, 'r', encoding='utf-8') as f2:
+        file1 = yaml.safe_load(f1) or {}
+        file2 = yaml.safe_load(f2) or {}
+        file1 = file1[list(file1.keys())[0]]['ros__parameters']
+        file2 = file2['plugin']['ros__parameters']
+
+        print (file1.get('targets').keys())
+    def recursive_merge(dict1, dict2):
+        for key, value in dict2.items():
+            if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+                recursive_merge(dict1[key], value)
+            else:
+                dict1[key] = value
+        return dict1
+
+    parameters = recursive_merge(file1, file2)
+
+    if ('targets' in file1):
+        targets = list(file1.get('targets').keys())
+        target = []
+        for _ in range (len(targets)):
+            target.append(str(targets[_]))
+        target_dict = {'target': target}
+
+        parameters.update(target_dict)
+    
+    return parameters
