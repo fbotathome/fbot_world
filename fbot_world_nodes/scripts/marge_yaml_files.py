@@ -1,41 +1,47 @@
 import yaml
 
-def MergeYamlFiles(file, plugin, output_file, node_name=None):
-    with open(file, 'r', encoding='utf-8') as f1, open(plugin, 'r', encoding='utf-8') as f2:
-        data1 = yaml.safe_load(f1) or {}
-        data2 = yaml.safe_load(f2) or {}
-        data_aux = data1
-        data1 = data1[list(data1.keys())[0]]
-        data2 = data2['plugin']
+def MergeYamlFiles(file: str = None,
+                plugin_file: str = None) -> dict:
+    '''
+    @brief Utility function to merge two ROS 2 YAML parameter files.
+    @param file: The base YAML file whit targets.
+    @param plugin_file: The plugin YAML file.
 
-        print (data1.get('ros__parameters').get('targets').keys())
-    def recursive_merge(dict1, dict2):
+    This script defines a function that reads two YAML files—one for the base configuration 
+    and one for a plugin—and merges their `ros__parameters`. It also extracts a list of target keys 
+    if available and injects them as a separate 'target' list.
+    '''
+    with open(file, 'r', encoding='utf-8') as f1, open(plugin_file, 'r', encoding='utf-8') as f2:
+        file1 = yaml.safe_load(f1) or {}
+        file2 = yaml.safe_load(f2) or {}
+        file1 = file1[list(file1.keys())[0]]['ros__parameters']
+        file2 = file2['plugin']['ros__parameters']
+
+        print (file1.get('targets').keys())
+    def recursiveMerge(dict1: dict, dict2: dict) -> dict:
+        '''
+        @brief Recursive function to merge two dictionaries.
+        @param dict1: The first dictionary.
+        @param dict2: The second dictionary.
+        @return: The merged dictionary.
+
+        '''
         for key, value in dict2.items():
             if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
-                recursive_merge(dict1[key], value)
+                recursiveMerge(dict1[key], value)
             else:
                 dict1[key] = value
         return dict1
 
-    final = recursive_merge(data1, data2)
+    parameters = recursiveMerge(file1, file2)
 
-    if ('targets' in data1.get('ros__parameters')):
-        lugares = list(data1.get('ros__parameters').get('targets').keys())
-        lugares_string = []
-        for x in range (len(lugares)):
-            lugares_string.append(str(lugares[x]))
-        lugares1 =[]
-        lugares1.append(lugares)
-        lugares1 = {'lugares': lugares1}
+    if ('targets' in file1):
+        targets = list(file1.get('targets').keys())
+        target = []
+        for _ in range (len(targets)):
+            target.append(str(targets[_]))
+        target_dict = {'target': target}
 
-        final['ros__parameters'].update(lugares1)
-
-
-    data = {
-        node_name: final
-    }
-
-    #merged_data = {list(data_aux.keys())[0]: (final, 'lugares: {'+ str(lugares)+'}')}
+        parameters.update(target_dict)
     
-    with open(output_file, 'w', encoding='utf-8') as f_out:
-        valor = yaml.dump(data, f_out, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    return parameters
