@@ -1,6 +1,6 @@
 import yaml
 
-def MergeYamlFiles(file: str = None,
+def mergeYamlFiles(file: str = None,
                 plugin_file: str = None) -> dict:
     '''
     @brief Utility function to merge two ROS 2 YAML parameter files.
