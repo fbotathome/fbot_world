@@ -17,7 +17,6 @@ def mergeYamlFiles(file: str = None,
         file1 = file1[list(file1.keys())[0]]['ros__parameters']
         file2 = file2['plugin']['ros__parameters']
 
-        print (file1.get('targets').keys())
     def recursiveMerge(dict1: dict, dict2: dict) -> dict:
         '''
         @brief Recursive function to merge two dictionaries.
