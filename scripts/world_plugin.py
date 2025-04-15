@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 import rclpy
 from rclpy.node import Node
 import redis
