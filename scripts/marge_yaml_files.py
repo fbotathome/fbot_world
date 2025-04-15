@@ -18,15 +18,22 @@ def MergeYamlFiles(file: str = None,
         file2 = file2['plugin']['ros__parameters']
 
         print (file1.get('targets').keys())
-    def recursive_merge(dict1, dict2):
+    def recursiveMerge(dict1: dict, dict2: dict) -> dict:
+        '''
+        @brief Recursive function to merge two dictionaries.
+        @param dict1: The first dictionary.
+        @param dict2: The second dictionary.
+        @return: The merged dictionary.
+
+        '''
         for key, value in dict2.items():
             if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
-                recursive_merge(dict1[key], value)
+                recursiveMerge(dict1[key], value)
             else:
                 dict1[key] = value
         return dict1
 
-    parameters = recursive_merge(file1, file2)
+    parameters = recursiveMerge(file1, file2)
 
     if ('targets' in file1):
         targets = list(file1.get('targets').keys())
