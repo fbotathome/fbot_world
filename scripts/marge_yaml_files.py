@@ -1,15 +1,17 @@
 import yaml
 
-def MergeYamlFiles(file, plugin):
+def MergeYamlFiles(file: str = None,
+                plugin_file: str = None) -> dict:
     '''
-    @file merge_yaml.py
     @brief Utility function to merge two ROS 2 YAML parameter files.
+    @param file: The base YAML file whit targets.
+    @param plugin_file: The plugin YAML file.
 
     This script defines a function that reads two YAML files—one for the base configuration 
     and one for a plugin—and merges their `ros__parameters`. It also extracts a list of target keys 
     if available and injects them as a separate 'target' list.
     '''
-    with open(file, 'r', encoding='utf-8') as f1, open(plugin, 'r', encoding='utf-8') as f2:
+    with open(file, 'r', encoding='utf-8') as f1, open(plugin_file, 'r', encoding='utf-8') as f2:
         file1 = yaml.safe_load(f1) or {}
         file2 = yaml.safe_load(f2) or {}
         file1 = file1[list(file1.keys())[0]]['ros__parameters']
