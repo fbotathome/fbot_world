@@ -6,7 +6,7 @@ import os
 
 
 def generate_launch_description():
-    node_name = 'pose'
+    config_file_name = 'pose'
     #Definir node_name vindo do behavior
 
     plugin_config_file_path = os.path.join(
@@ -18,7 +18,7 @@ def generate_launch_description():
     config_launch_file_path = os.path.join(
         get_package_share_directory('fbot_world'),
         'config',
-        node_name + '.yaml'
+        config_file_name + '.yaml'
     )
 
     data = mergeYamlFiles(config_launch_file_path,
@@ -26,8 +26,8 @@ def generate_launch_description():
 
     pose_node = Node(
         package='fbot_world',
-        executable=node_name,
-        name=node_name,
+        executable='pose',
+        name='pose,
         parameters=[data],
     )
     
