@@ -1,24 +1,10 @@
 #!/usr/bin/env python3
 
 import rclpy
-from rclpy import time
-
-
 import rclpy.logging
-import tf2_ros
-
 from scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.srv import GetKey, GetPose
-
-from geometry_msgs.msg import Pose, PoseStamped, Vector3
-
-import yaml
-
-from math import sqrt
-
-
-
-
+from fbot_world_msgs.srv import GetPose
+from geometry_msgs.msg import Pose, Vector3
 
 class PosePlugin(WorldPlugin):
   """
@@ -42,10 +28,7 @@ class PosePlugin(WorldPlugin):
     self.readParameters(self.locations)
     self.setStaticPose()
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
-    
-    # self.closest_key_server = self.create_service(GetKey, '/fbot_world/get_closest_key', self.getClosestKey)
-
-    self.get_logger().info(f"Node started!!!")
+    self.get_logger().info(f"Pose node started!!!")
 
   def readPose(self, key: str):
     """
@@ -82,7 +65,6 @@ class PosePlugin(WorldPlugin):
       size.z = float(db_size['sz'])
     except Exception:
       pass
-
     return size
 
   def setStaticPose(self):
@@ -96,45 +78,6 @@ class PosePlugin(WorldPlugin):
         pipe.hmset(key, pose)
       pipe.execute()
   
-  # def getClosestKey(self, req : GetKey.Request, res : GetKey.Response):
-  #   query = req.query 
-  #   self.get_logger().info(f"Requisição: {query}")
-  #   keys = self.r.keys(query)
-  #   rclpy.logging.get_logger('pose_plugin').info("Tipo de cada key: " + str([type(k) for k in keys]))
-  #   #rospy.loginfo(keys)
-  #   rclpy.logging.get_logger('pose_plugin').info("Keys: " + str(keys))
-  #   keys = [k.decode('utf-8') if isinstance(k, bytes) else k for k in keys]
-  #   rclpy.logging.get_logger('pose_plugin').info("Tipo de cada key: " + str([type(k) for k in keys]))
-
-  #   rclpy.logging.get_logger('pose_plugin').info("Keys decode: " + str(keys))
-  #   keys = list(filter(lambda x: '/pose' in x and 'target' not in x, keys))
-  #   #rospy.loginfo(keys)
-  #   rclpy.logging.get_logger('pose_plugin').info("Filtered keys: " + str(keys))
-  #   min_distance = float('inf')
-  #   min_key = ''
-  #   for key in keys:
-  #     pose = PoseStamped()
-  #     pose.header.frame_id = self.fixed_frame
-  #     pose.header.stamp = time.Time.now()
-
-  #     pose.pose = self.readPose(key)
-
-  #     t = tf2_ros.TransformerROS()
-  #     p = t.transformPose('/map', pose)
-
-  #     distance = sqrt(p.pose.position.x**2 + p.pose.position.y**2 + p.pose.position.z**2)
-  #     if distance < min_distance:
-  #       min_distance = distance
-  #       min_key = key
-    
-  #   min_key = min_key.replace('/pose', '')
-  #   #rospy.loginfo("Key: " + min_key)
-  #   rclpy.logging.get_logger('pose_plugin').info("Closest key: " + min_key)
-  #   res = GetKey.Response()
-  #   res.key = min_key
-  #   res.success = True
-  #   return res
-
   def getPose(self, req : GetPose.Request, res : GetPose.Response):
     '''
     @brief Service callback to return the pose and size for a requested target key.
@@ -164,7 +107,6 @@ class PosePlugin(WorldPlugin):
     @return A list of target names.
     """
     return self.get_parameter('target').value
-  
 
   def declareParameters(self, locations):
     """
