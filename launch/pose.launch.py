@@ -1,14 +1,14 @@
 from launch import LaunchDescription
+from launch.actions import OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
-from scripts.marge_yaml_files import mergeYamlFiles
+from scripts.merge_yaml_files import mergeYamlFiles
 import os
 
 
-def generate_launch_description():
-    config_file_name = 'pose'
-    #Definir node_name vindo do behavior
-
+def node_setup(context):
+    config_file_name = LaunchConfiguration('teste').perform(context)
     plugin_config_file_path = os.path.join(
         get_package_share_directory('fbot_world'),
         'config',
@@ -27,10 +27,14 @@ def generate_launch_description():
     pose_node = Node(
         package='fbot_world',
         executable='pose',
-        name='pose,
+        name='pose',
         parameters=[data],
     )
+    return [pose_node]
+
+def generate_launch_description():
+    opfunc = OpaqueFunction(function = node_setup)
     
     return LaunchDescription([
-        pose_node
+        opfunc
     ])
