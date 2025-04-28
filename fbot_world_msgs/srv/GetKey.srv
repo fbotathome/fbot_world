@@ -1,0 +1,6 @@
+string query
+float64 threshold
+float64 max_size
+---
+string key
+bool success
