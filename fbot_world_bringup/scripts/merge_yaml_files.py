@@ -43,8 +43,4 @@ def mergeYamlFiles(file: str = None,
 
         parameters.update(target_dict)
     
-<<<<<<< HEAD:fbot_world_bringup/scripts/merge_yaml_files.py
     return parameters
-=======
-    return parameters
->>>>>>> main:scripts/merge_yaml_files.py
