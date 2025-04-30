@@ -9,7 +9,10 @@ import os
 
 def node_setup(context):
     config_file_name = LaunchConfiguration('config_file_name').perform(context)
+<<<<<<< HEAD:fbot_world_bringup/launch/pose.launch.py
     print(f'LaunchConfiguration: {config_file_name}')
+=======
+>>>>>>> 0c11a0f4beef5193ef9075dd6107f32026321734:launch/pose.launch.py
     plugin_config_file_path = os.path.join(
         get_package_share_directory('fbot_world'),
         'config',
