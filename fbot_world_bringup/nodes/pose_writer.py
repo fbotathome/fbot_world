@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
-import rospy
+import rclpy
+import rclpy.logging
+import rclpy.exceptions
+#import rospy
+from rclpy.exceptions import ROSInterruptException
 import yaml
 import os
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -29,7 +33,8 @@ OrderedLoader.add_constructor(
 
 class PoseWriter:
     def __init__(self):
-        rospy.init_node('pose_writer_node')
+        rclpy.init(args=None)
+        
 
         self.root_path = os.environ["HOME"]
         self.poses = {'pose': {'targets': {}}}
@@ -41,13 +46,13 @@ class PoseWriter:
             if self.yaml_file.endswith('.yaml'):
                 break
             else:
-                rospy.logwarn("Invalid input. The file name must end with '.yaml'. Please try again.")
-
+                rclpy.logging.get_logger().info("Invalid input. The file name must end with '.yaml'. Please try again.")
         self.yaml_path = self.config_path + '/' + self.yaml_file
 
-        self.pose_topic = rospy.get_param('~pose_topic', 'amcl_pose') 
+        rclpy.Node.declare_parameter('~pose_topic', 'amcl_pose')
+        self.pose_topic = rclpy.Node.get_parameter('~pose_topic', 'amcl_pose').value
 
-        self.pose_sub = rospy.Subscriber(self.pose_topic, PoseWithCovarianceStamped, self.pose_callback)
+        #self.pose_sub = rospy.Subscriber(self.pose_topic, PoseWithCovarianceStamped, self.pose_callback)
 
     def pose_callback(self, msg):
         self.current_pose = msg.pose.pose
@@ -57,15 +62,16 @@ class PoseWriter:
         Save the current pose in the specified topic to a yaml file.
         '''
 
-        while not rospy.is_shutdown():
+        #while not rospy.is_shutdown():
+        while True:
             pose_name = input("Move the robot to the desired pose and enter its name (e.g., 'garbage_1', 'exit'): ")
 
             if not pose_name:
-                rospy.logwarn("No name provided, skipping pose.")
+                rclpy.logging.get_logger().info("No name provided, skipping pose.")
                 continue
 
             if not hasattr(self, 'current_pose'):
-                rospy.logwarn("No pose received from topic yet.")
+                rclpy.logging.get_logger().info("No pose received from topic yet.")
                 continue
 
             self.poses['pose']['targets'][pose_name] = OrderedDict([
@@ -78,34 +84,34 @@ class PoseWriter:
             ('ow', self.current_pose.orientation.w)
         ])
 
-            rospy.loginfo(f"Pose '{pose_name}' saved.")
+            rclpy.logging.get_logger().info(f"Pose '{pose_name}' saved.")
 
             while True:
                 save_now = input("Do you want to add more poses? (y/n): ").lower()
                 if save_now == 'n':
                     self.write_to_yaml()
-                    rospy.loginfo(f"Poses saved to {self.yaml_file}. Shutting down node.")
+                    rclpy.logging.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
                     return
 
                 elif save_now == 'y':
                     break
                 else:
-                    rospy.logwarn("Invalid input. Please enter 'y' or 'n'.")
+                    rclpy.logging.get_logger().info("Invalid input. Please enter 'y' or 'n'.")
 
     def write_to_yaml(self):
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
 
         if os.path.exists(self.yaml_path):
-            rospy.loginfo(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
+            rclpy.logging.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
 
             with open(self.yaml_path, 'r') as yaml_file:
                 try:
                     existing_data = yaml.load(yaml_file, Loader=OrderedLoader) or OrderedDict()
                 except yaml.YAMLError as e:
-                    rospy.logerr(f"Error reading {self.yaml_file}: {e}")
+                    rclpy.logging.get_logger().info(f"Error reading {self.yaml_file}: {e}")
                     existing_data = OrderedDict()
         else:
-            rospy.loginfo(f"{self.yaml_file} does not exist. Creating a new file.")
+            rclpy.logging.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
             existing_data = OrderedDict()
 
         if 'pose' not in existing_data:
@@ -117,9 +123,11 @@ class PoseWriter:
              yaml.dump(existing_data, yaml_file, default_flow_style=False, Dumper=OrderedDumper)
              
         return
-if __name__ == '__main__':
+
+
+def main(args=None):
     try:
         saver = PoseWriter()
         saver.save_pose()
-    except rospy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         pass
