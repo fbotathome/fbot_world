@@ -80,16 +80,17 @@ class PosePlugin(WorldPlugin):
   
   def getPose(self, req : GetPose.Request, res : GetPose.Response):
     '''
-    @brief Service callback to return the pose and size for a requested target key.
-    @param req The service request containing the target key.
-    @param res The service response to populate with pose and size.
-    @return A filled GetPose.Response object.
-    @details The function checks if the key is valid and retrieves the pose and size from Redis.
+    @brief Service callback to return the pose and size for a requested target key. 
+    The function checks if the key is valid and retrieves the pose and size from Redis.
     If the key is not found or empty, it returns an error code.
-    @note Error codes: 
+    Error codes: 
       - 0: Success
       - 1: Key is empty
       - 2: Key not found in locations
+    @param req The service request containing the target key.
+    @param res The service response to populate with pose and size.
+    @return A filled GetPose.Response object.
+    @details 
     '''
 
     res = GetPose.Response()
