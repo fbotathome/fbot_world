@@ -45,15 +45,13 @@ class PoseWriter (Node):
     by entering a name. The saved poses are stored in a YAML file for later use.
     '''
     
-    def __init__(self, node_name: str = 'pose_writer'):
+    def __init__(self):
         '''
         @brief Constructor for the PoseWriter node.
-        @param node_name The name of the ROS2 node.
         '''
 
-        super().__init__(node_name=node_name)
-        
-        self.node_name = node_name
+        super().__init__(node_name='pose_writer')
+    
         self.root_path = os.environ["HOME"]
         self.poses = {'pose': {'ros__parameters': {'targets': {}}}}
 
@@ -68,22 +66,21 @@ class PoseWriter (Node):
         self.yaml_path = self.config_path + '/' + self.yaml_file
         self.declare_parameter('~pose_topic', '/amcl_pose')
         self.pose_topic = self.get_parameter('~pose_topic').get_parameter_value().string_value
-        print(f"Pose topic: {self.pose_topic}")
 
-        self.pose_sub = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.pose_callback, 10)
+        self.pose_sub = self.create_subscription(PoseWithCovarianceStamped, self.pose_topic, self.pose_callback, 10)
 
-    def pose_callback(self, msg):
+    def pose_callback(self, msg: PoseWithCovarianceStamped) -> None:
         '''
         @brief Callback function for the pose subscriber.
-        @param msg The PoseWithCovarianceStamped message received from the topic.
+        @param msg: The PoseWithCovarianceStamped message received from the topic.
         '''
         self.get_logger().info('Pose callback triggered')
         self.get_logger().info(f"Received msg: {msg.pose.pose.position.x}, {msg.pose.pose.position.y}, {msg.pose.pose.position.z}")
         self.current_pose = msg.pose.pose
 
-    def save_pose(self):
+    def save_pose(self) -> None:
         '''
-        Save the current pose in the specified topic to a yaml file.
+        @brief Save the current pose in the specified topic to a yaml file.
         '''
 
         while rclpy.ok():
@@ -124,6 +121,9 @@ class PoseWriter (Node):
                     self.get_logger().info("Invalid input. Please enter 'y' or 'n'.")
 
     def write_to_yaml(self):
+        '''
+        @brief Write the collected poses to a YAML file.
+        '''
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
 
         if os.path.exists(self.yaml_path):
@@ -152,7 +152,7 @@ class PoseWriter (Node):
 def main(args=None) -> None:
     try:
         rclpy.init(args=args)
-        saver = PoseWriter('pose_writer')
+        saver = PoseWriter()
         saver.save_pose()
         saver.destroy_node()
         rclpy.try_shutdown()
