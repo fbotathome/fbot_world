@@ -10,13 +10,13 @@ import os
 def node_setup(context):
     config_file_name = LaunchConfiguration('config_file_name').perform(context)
     plugin_config_file_path = os.path.join(
-        get_package_share_directory('fbot_world'),
+        get_package_share_directory('fbot_world_bringup'),
         'config',
         'plugin.yaml'
     )
 
     config_launch_file_path = os.path.join(
-        get_package_share_directory('fbot_world'),
+        get_package_share_directory('fbot_world_bringup'),
         'config',
         config_file_name + '.yaml'
     )
@@ -25,7 +25,7 @@ def node_setup(context):
                     plugin_config_file_path,)
 
     pose_node = Node(
-        package='fbot_world',
+        package='fbot_world_bringup',
         executable='pose',
         name='pose',
         parameters=[data],
