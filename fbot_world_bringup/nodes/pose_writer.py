@@ -89,11 +89,11 @@ class PoseWriter (Node):
             pose_name = input("Move the robot to the desired pose and enter its name (e.g., 'garbage_1', 'exit'): ")
 
             if not pose_name:
-                self.get_logger().info("No name provided, skipping pose.")
+                self.get_logger().warning("No name provided, skipping pose.")
                 continue
 
             if not hasattr(self, 'current_pose'):
-                self.get_logger().info("No pose received from topic yet.")
+                self.get_logger().warning("No pose received from topic yet.")
                 continue
 
             self.poses['pose']['ros__parameters']['targets'][pose_name] = OrderedDict([
@@ -118,7 +118,7 @@ class PoseWriter (Node):
                 elif save_now == 'y':
                     break
                 else:
-                    self.get_logger().info("Invalid input. Please enter 'y' or 'n'.")
+                    self.get_logger().warning("Invalid input. Please enter 'y' or 'n'.")
 
     def write_to_yaml(self):
         '''
@@ -127,13 +127,13 @@ class PoseWriter (Node):
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
 
         if os.path.exists(self.yaml_path):
-            self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
+            self.get_logger().error(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
 
             with open(self.yaml_path, 'r') as yaml_file:
                 try:
                     existing_data = yaml.load(yaml_file, Loader=OrderedLoader) or OrderedDict()
                 except yaml.YAMLError as e:
-                    self.get_logger().info(f"Error reading {self.yaml_file}: {e}")
+                    self.get_logger().error(f"Error reading {self.yaml_file}: {e}")
                     existing_data = OrderedDict()
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
