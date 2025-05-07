@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 import glob
 
-package_name = 'fbot_world'
+package_name = 'fbot_world_bringup'
 
 setup(
     name=package_name,

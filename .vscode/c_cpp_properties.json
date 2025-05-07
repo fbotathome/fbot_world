@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/stihl/fbot_ws/install/fbot_world_msgs/include/**",
+        "/home/stihl/fbot_ws/install/sick_scan_xd/include/**",
+        "/home/stihl/fbot_ws/install/hoverboard_driver/include/**",
+        "/home/stihl/fbot_ws/install/fbot_vision_msgs/include/**",
+        "/home/stihl/fbot_ws/install/fbot_speech_msgs/include/**",
+        "/home/stihl/fbot_ws/install/audio_common_msgs/include/**",
+        "/home/stihl/stihl_ws/install/hoverboard_driver/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/stihl/fbot_ws/src/LMS1xx/include/**",
+        "/home/stihl/fbot_ws/src/fbot_hri/fbot_speech/include/**",
+        "/home/stihl/fbot_ws/src/joy2twist/joy2twist/include/**",
+        "/home/stihl/fbot_ws/src/sick_scan_xd/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
