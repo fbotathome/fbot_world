@@ -80,13 +80,32 @@ class PosePlugin(WorldPlugin):
   
   def getPose(self, req : GetPose.Request, res : GetPose.Response):
     '''
-    @brief Service callback to return the pose and size for a requested target key.
+    @brief Service callback to return the pose and size for a requested target key. 
+    The function checks if the key is valid and retrieves the pose and size from Redis.
+    If the key is not found or empty, it returns an error code.
+    Error codes: 
+      - 0: Success
+      - 1: Key is empty
+      - 2: Key not found in locations
     @param req The service request containing the target key.
     @param res The service response to populate with pose and size.
     @return A filled GetPose.Response object.
+    @details 
     '''
-    key = req.key
+
     res = GetPose.Response()
+    self.get_logger().info(f"Pose request: {req.key}")
+    self.get_logger().info(f"Pose request: {type(req.key)}")
+    if req.key == 'None':
+      rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(req.key))
+      res.error = 1
+      return res
+    if req.key not in self.locations:
+      rclpy.logging.get_logger('pose_plugin').error("Key not found in locations: " + str(req.key))
+      res.error = 2
+      return res
+    res.error = 0
+    key = req.key
     pose = self.readPose(key)
     res.pose = pose
     rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(pose))
