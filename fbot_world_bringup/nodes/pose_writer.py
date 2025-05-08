@@ -62,7 +62,7 @@ class PoseWriter (Node):
             if self.yaml_file.endswith('.yaml'):
                 break
             else:
-                self.get_logger().info("Invalid input. The file name must end with '.yaml'. Please try again.")
+                self.get_logger().warning("Invalid input. The file name must end with '.yaml'. Please try again.")
         self.yaml_path = self.config_path + '/' + self.yaml_file
         self.declare_parameter('~pose_topic', '/amcl_pose')
         self.pose_topic = self.get_parameter('~pose_topic').get_parameter_value().string_value
@@ -74,7 +74,6 @@ class PoseWriter (Node):
         @brief Callback function for the pose subscriber.
         @param msg: The PoseWithCovarianceStamped message received from the topic.
         '''
-        self.get_logger().info('Pose callback triggered')
         self.get_logger().info(f"Received msg: {msg.pose.pose.position.x}, {msg.pose.pose.position.y}, {msg.pose.pose.position.z}")
         self.current_pose = msg.pose.pose
 
@@ -127,7 +126,7 @@ class PoseWriter (Node):
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
 
         if os.path.exists(self.yaml_path):
-            self.get_logger().error(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
+            self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
 
             with open(self.yaml_path, 'r') as yaml_file:
                 try:
