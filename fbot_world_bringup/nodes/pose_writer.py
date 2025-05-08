@@ -52,10 +52,10 @@ class PoseWriter (Node):
 
         super().__init__(node_name='pose_writer')
     
-        self.root_path = os.environ["HOME"]
         self.poses = {'pose': {'ros__parameters': {'targets': {}}}}
 
-        self.config_path = self.root_path + '/fbot_ws/src/fbot_world/fbot_world_bringup/config'
+        ws_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../.."))
+        self.config_path = os.path.join(ws_dir, "src", "fbot_world", "fbot_world_bringup", "config")
 
         while True:
             self.yaml_file = input("Enter the name of the file to save the poses (e.g., 'pose_inspection.yaml'): ")
