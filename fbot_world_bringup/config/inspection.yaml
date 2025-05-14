@@ -1,0 +1,27 @@
+pose:
+  ros__parameters:
+    targets:
+      pre_examination: 
+        px: 
+        py: 
+        pz: 
+        ox: 
+        oy: 
+        oz: 
+        ow: 
+      examination: 
+        px: 
+        py: 
+        pz: 
+        ox: 
+        oy: 
+        oz: 
+        ow:
+      exit: 
+        px: 
+        py: 
+        pz: 
+        ox: 
+        oy: 
+        oz: 
+        ow:
