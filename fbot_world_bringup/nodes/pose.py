@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-##ADICIONAR YAML DIRETO NO REDIS
-
-
 import rclpy
 import rclpy.logging
 import yaml
@@ -10,7 +7,6 @@ from scripts.world_plugin import WorldPlugin
 from fbot_world_msgs.srv import GetPose
 from geometry_msgs.msg import Pose, Vector3
 from ament_index_python.packages import get_package_share_directory
-import yaml
 
 def readYamlFile(file_path: str = None):
   with open(file_path, 'r') as file:
