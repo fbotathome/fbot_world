@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
+##ADICIONAR YAML DIRETO NO REDIS
+
 
 import rclpy
 import rclpy.logging
+import yaml
+import os
 from scripts.world_plugin import WorldPlugin
 from fbot_world_msgs.srv import GetPose
 from geometry_msgs.msg import Pose, Vector3
+from ament_index_python.packages import get_package_share_directory
+import yaml
+
+def readYamlFile(file_path: str = None):
+  with open(file_path, 'r') as file:
+    yaml_data = yaml.safe_load(file)['pose']['ros__parameters']['targets']
+  return yaml_data
 
 class PosePlugin(WorldPlugin):
   """
@@ -21,14 +32,17 @@ class PosePlugin(WorldPlugin):
     @param node_name The name of the ROS2 node.
     """  
     super().__init__(nodeName=node_name)
+    self.declareParameters()
+    self.readParameters()
+    ws_dir = os.path.abspath(os.path.join(get_package_share_directory('fbot_world_bringup'), '../../../..'))
+    self.file_path = os.path.join(ws_dir, "src", "fbot_world","fbot_world_bringup", "config", self.config_file_name + '.yaml')
+    self.targets = readYamlFile(self.file_path)
 
-    self.declareParameters_targets()
-    self.locations = self.readParameters_targets()
-    self.declareParameters(self.locations)
-    self.readParameters(self.locations)
     self.setStaticPose()
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
+    self.get_logger().info(f"Type targets: {type(self.targets)}")
+    self.get_logger().info(f"Pose node locations: {self.targets.keys()}")
 
   def readPose(self, key: str):
     """
@@ -50,6 +64,13 @@ class PosePlugin(WorldPlugin):
     pose.orientation.w = float(db_pose[b'ow'])  
     
     return pose
+
+  def declareParameters(self):
+    self.declare_parameter('config_file_name', 'pose')
+  
+  def readParameters(self):
+    self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
+
 
   def readSize(self, key: str):
     '''
@@ -100,8 +121,8 @@ class PosePlugin(WorldPlugin):
       rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(req.key))
       res.error = 1
       return res
-    if req.key not in self.locations:
-      rclpy.logging.get_logger('pose_plugin').error("Key not found in locations: " + str(req.key))
+    if req.key not in self.targets.keys():
+      rclpy.logging.get_logger('pose_plugin').error("Key not found in targets: " + str(req.key))
       res.error = 2
       return res
     res.error = 0
@@ -113,54 +134,6 @@ class PosePlugin(WorldPlugin):
     res.size = size
     rclpy.logging.get_logger('pose_plugin').info("Size: " + str(size))
     return res
-
-  def declareParameters_targets(self):
-    """
-    @brief Declares the initial list of target keys as parameters.
-    """
-    self.declare_parameter('target', rclpy.Parameter.Type.STRING_ARRAY)
-  
-  def readParameters_targets(self):
-    """
-    @brief Reads the list of target keys from declared parameters.
-    @return A list of target names.
-    """
-    return self.get_parameter('target').value
-
-  def declareParameters(self, locations):
-    """
-    @brief Declares position and orientation parameters for each target location.
-    @param locations A list of target names.
-    """
-    self.locations = locations
-    self.get_logger().info(f"Declaring parameters {self.locations}")
-    for target in range(0,len(self.locations)):
-      self.declare_parameter('targets.'+ self.locations[target] +'.px', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.py', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.pz', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.ox', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.oy', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.oz', 1.0)
-      self.declare_parameter('targets.'+ self.locations[target] +'.ow', 1.0)
-
-  def readParameters(self, locations):
-    """
-    @brief Reads position and orientation values from parameters for each target.
-    @param locations A list of target names.
-    """
-    self.locations = locations
-    self.targets = {}
-    for target in  range(len(self.locations)):
-      self.targets.update({ self.locations[target]: {
-        'px': self.get_parameter('targets.'+ str(self.locations[target]) +'.px').value,
-        'py': self.get_parameter('targets.'+ str(self.locations[target]) +'.py').value,
-        'pz': self.get_parameter('targets.'+ str(self.locations[target]) +'.pz').value,
-        'ox': self.get_parameter('targets.'+ str(self.locations[target]) +'.ox').value,
-        'oy': self.get_parameter('targets.'+ str(self.locations[target]) +'.oy').value,
-        'oz': self.get_parameter('targets.'+ str(self.locations[target]) +'.oz').value,
-        'ow': self.get_parameter('targets.'+ str(self.locations[target]) +'.ow').value,
-      }})
-
   
 
 
