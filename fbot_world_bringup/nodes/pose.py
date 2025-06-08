@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-##ADICIONAR YAML DIRETO NO REDIS
-
 
 import rclpy
 import rclpy.logging
@@ -37,12 +35,11 @@ class PosePlugin(WorldPlugin):
     ws_dir = os.path.abspath(os.path.join(get_package_share_directory('fbot_world_bringup'), '../../../..'))
     self.file_path = os.path.join(ws_dir, "src", "fbot_world","fbot_world_bringup", "config", self.config_file_name + '.yaml')
     self.targets = readYamlFile(self.file_path)
+    self.get_logger().info(f"File name: {self.config_file_name}")
 
     self.setStaticPose()
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
-    self.get_logger().info(f"Type targets: {type(self.targets)}")
-    self.get_logger().info(f"Pose node locations: {self.targets.keys()}")
 
   def readPose(self, key: str):
     """
@@ -53,8 +50,6 @@ class PosePlugin(WorldPlugin):
 
     pose = Pose()
     db_pose = self.r.hgetall('target/'+key+'/'+'pose')
-    self.get_logger().info(f"Reading pose from r: {self.r}")
-    self.get_logger().info(f"Reading pose from db_pose: {db_pose}")
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -66,9 +61,15 @@ class PosePlugin(WorldPlugin):
     return pose
 
   def declareParameters(self):
+    """
+    @brief Declares parameters for the PosePlugin node.
+    """
     self.declare_parameter('config_file_name', 'pose')
   
   def readParameters(self):
+    """
+    @brief Reads parameters for the PosePlugin node.
+    """
     self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
 
 
@@ -116,7 +117,6 @@ class PosePlugin(WorldPlugin):
 
     res = GetPose.Response()
     self.get_logger().info(f"Pose request: {req.key}")
-    self.get_logger().info(f"Pose request: {type(req.key)}")
     if req.key == 'None':
       rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(req.key))
       res.error = 1
