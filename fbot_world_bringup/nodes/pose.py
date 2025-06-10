@@ -27,7 +27,7 @@ class PosePlugin(WorldPlugin):
   def __init__(self, node_name: str = 'pose'):
     """
     @brief Constructor for PosePlugin.
-    @param node_name The name of the ROS2 node.
+    @param node_name: The name of the ROS2 node.
     """  
     super().__init__(nodeName=node_name)
     self.declareParameters()
