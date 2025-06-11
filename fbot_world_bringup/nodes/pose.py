@@ -9,8 +9,13 @@ from geometry_msgs.msg import Pose, Vector3
 from ament_index_python.packages import get_package_share_directory
 
 def readYamlFile(file_path: str = None):
+  """
+  @brief Reads a YAML file and returns the 'targets' section as a dictionary.
+  @param file_path: The path to the YAML file.
+  @return A dictionary containing the 'targets' section of the YAML file.
+  """
   with open(file_path, 'r') as file:
-    yaml_data = yaml.safe_load(file)['pose']['ros__parameters']['targets']
+    yaml_data = yaml.safe_load(file)['targets']
   return yaml_data
 
 class PosePlugin(WorldPlugin):
@@ -25,7 +30,7 @@ class PosePlugin(WorldPlugin):
   def __init__(self, node_name: str = 'pose'):
     """
     @brief Constructor for PosePlugin.
-    @param node_name The name of the ROS2 node.
+    @param node_name: The name of the ROS2 node.
     """  
     super().__init__(nodeName=node_name)
     self.declareParameters()
@@ -43,7 +48,7 @@ class PosePlugin(WorldPlugin):
   def readPose(self, key: str):
     """
     @brief Reads pose data for a given key from the Redis database.
-    @param key The key identifying the target.
+    @param key: The key identifying the target.
     @return Pose object populated with position and orientation.
     """
 
@@ -71,8 +76,8 @@ class PosePlugin(WorldPlugin):
   def readSize(self, key: str):
     '''
     @brief Reads size (scale) data for a given key from the Redis database.
-    @param key The key identifying the target.
-    @return Vector3 object with x, y, and z sizes.
+    @param key: The key identifying the target.
+    @return Vector3: object with x, y, and z sizes.
     '''
     size = Vector3()
     db_size = self.r.hgetall(key)
@@ -104,10 +109,9 @@ class PosePlugin(WorldPlugin):
       - 0: Success
       - 1: Key is empty
       - 2: Key not found in locations
-    @param req The service request containing the target key.
-    @param res The service response to populate with pose and size.
+    @param req: The service request containing the target key.
+    @param res: The service response to populate with pose and size.
     @return A filled GetPose.Response object.
-    @details 
     '''
 
     res = GetPose.Response()
