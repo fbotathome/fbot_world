@@ -1,4 +1,4 @@
-plugin:
+/**:
   ros__parameters:
     redis:
       host: localhost
