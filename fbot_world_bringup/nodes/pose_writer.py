@@ -52,7 +52,7 @@ class PoseWriter (Node):
 
         super().__init__(node_name='pose_writer')
     
-        self.poses = {'pose': {'ros__parameters': {'targets': {}}}}
+        self.poses = {'targets': {}}
 
         ws_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../.."))
         self.config_path = os.path.join(ws_dir, "src", "fbot_world", "fbot_world_bringup", "config")
@@ -95,7 +95,7 @@ class PoseWriter (Node):
                 self.get_logger().warning("No pose received from topic yet.")
                 continue
 
-            self.poses['pose']['ros__parameters']['targets'][pose_name] = OrderedDict([
+            self.poses['targets'][pose_name] = OrderedDict([
             ('px', self.current_pose.position.x),
             ('py', self.current_pose.position.y),
             ('pz', self.current_pose.position.z),
@@ -138,10 +138,10 @@ class PoseWriter (Node):
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
             existing_data = OrderedDict()
 
-        if 'pose' not in existing_data:
-            existing_data['pose']= OrderedDict({'ros__parameters':{'targets': OrderedDict()}})
+        if 'targets' not in existing_data:
+            existing_data['targets']= OrderedDict()
 
-        existing_data['pose']['ros__parameters']['targets'].update(self.poses['pose']['ros__parameters']['targets'])
+        existing_data['targets'].update(self.poses['targets'])
         with open(self.yaml_path, 'w') as yaml_file:
              yaml.dump(existing_data, yaml_file, default_flow_style=False, Dumper=OrderedDumper)
              
