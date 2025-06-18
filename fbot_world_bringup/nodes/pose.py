@@ -44,15 +44,16 @@ class PosePlugin(WorldPlugin):
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
 
-  def readPose(self, dict: str, key: str):
+  def readPose(self, area: str, key: str):
     """
     @brief Reads pose data for a given key from the Redis database.
+    @param area: The area of the target.
     @param key: The key identifying the target.
     @return Pose object populated with position and orientation.
     """
 
     pose = Pose()
-    db_pose = self.r.hgetall(dict+'/'+key+'/'+'pose')
+    db_pose = self.r.hgetall(area+'/'+key+'/'+'pose')
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -76,14 +77,15 @@ class PosePlugin(WorldPlugin):
     self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
 
 
-  def readSize(self, dict: str, key: str):
+  def readSize(self, area: str, key: str):
     '''
     @brief Reads size (scale) data for a given key from the Redis database.
+    @param area: The area of the target.
     @param key: The key identifying the target.
     @return Vector3: object with x, y, and z sizes.
     '''
     size = Vector3()
-    db_size = self.r.hgetall(dict+'/'+key)
+    db_size = self.r.hgetall(area+'/'+key)
     try:
       size.x = float(db_size['sx'])
       size.y = float(db_size['sy'])
