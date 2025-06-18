@@ -16,7 +16,7 @@ def readYamlFile(file_path: str = None):
   @return A dictionary containing the 'targets' section of the YAML file.
   """
   with open(file_path, 'r') as file:
-    yaml_data = yaml.safe_load(file)['targets']
+    yaml_data = yaml.safe_load(file)
   return yaml_data
 
 class PosePlugin(WorldPlugin):
@@ -42,10 +42,11 @@ class PosePlugin(WorldPlugin):
     self.get_logger().info(f"File name: {self.config_file_name}")
 
     self.setStaticPose()
-    self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
+    self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getTargets)
+    self.sitable_server = self.create_service(GetPose, '/fbot_world/get_sitable_pose', self.getSitablePose)
     self.get_logger().info(f"Pose node started!!!")
 
-  def readPose(self, key: str):
+  def readPose(self, dict: str, key: str):
     """
     @brief Reads pose data for a given key from the Redis database.
     @param key: The key identifying the target.
@@ -53,7 +54,7 @@ class PosePlugin(WorldPlugin):
     """
 
     pose = Pose()
-    db_pose = self.r.hgetall('target/'+key+'/'+'pose')
+    db_pose = self.r.hgetall(dict+'/'+key+'/'+'pose')
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -77,14 +78,14 @@ class PosePlugin(WorldPlugin):
     self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
 
 
-  def readSize(self, key: str):
+  def readSize(self, dict: str, key: str):
     '''
     @brief Reads size (scale) data for a given key from the Redis database.
     @param key: The key identifying the target.
     @return Vector3: object with x, y, and z sizes.
     '''
     size = Vector3()
-    db_size = self.r.hgetall(key)
+    db_size = self.r.hgetall(dict+'/'+key)
     try:
       size.x = float(db_size['sx'])
       size.y = float(db_size['sy'])
@@ -97,14 +98,41 @@ class PosePlugin(WorldPlugin):
     '''
     @brief Stores all target poses as static entries in the Redis database.
     '''
-    poses = self.targets
     with self.r.pipeline() as pipe:
-      for p_id, pose in poses.items():
-        key = 'target/' + p_id + '/' + 'pose'
-        pipe.hmset(key, pose)
+      for target in self.targets.keys():
+        for p_id, pose in self.targets[target].items():
+          key = str(target)+'/' + p_id + '/' + 'pose'
+          pipe.hmset(key, pose)
       pipe.execute()
+
+  def getSitablePose(self, req : GetPose.Request, res : GetPose.Response):
+    '''
+    @brief Service callback to return the list of target keys.
+    The function retrieves all keys from the Redis database and returns them in the response.
+    @param req: The service request (not used in this case).
+    @param res: The service response to populate with target keys.
+    @return A filled GetPose.Response object containing the list of target keys.
+    '''
+    res = GetPose.Response()
+    self.get_logger().info("Targets request")
+    res = self.getPose(dict = 'sitable_positions', key = req.key)
+    return res
+
+
+  def getTargets(self, req : GetPose.Request, res : GetPose.Response):
+    '''
+    @brief Service callback to return the list of target keys.
+    The function retrieves all keys from the Redis database and returns them in the response.
+    @param req: The service request (not used in this case).
+    @param res: The service response to populate with target keys.
+    @return A filled GetPose.Response object containing the list of target keys.
+    '''
+    res = GetPose.Response()
+    self.get_logger().info("Targets request")
+    res = self.getPose(dict = 'targets', key = req.key)
+    return res
   
-  def getPose(self, req : GetPose.Request, res : GetPose.Response):
+  def getPose(self, dict: str, key: str):
     '''
     @brief Service callback to return the pose and size for a requested target key. 
     The function checks if the key is valid and retrieves the pose and size from Redis.
@@ -119,21 +147,21 @@ class PosePlugin(WorldPlugin):
     '''
 
     res = GetPose.Response()
-    self.get_logger().info(f"Pose request: {req.key}")
-    if req.key == 'None':
-      rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(req.key))
+    self.get_logger().info(f"Pose request: {key}")
+    if key == 'None':
+      rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(key))
       res.error = 1
       return res
-    if req.key not in self.targets.keys():
-      rclpy.logging.get_logger('pose_plugin').error("Key not found in targets: " + str(req.key))
+    if key not in self.targets[dict].keys():
+      rclpy.logging.get_logger('pose_plugin').error("Key not found in "+dict+": " + str(key))
       res.error = 2
       return res
     res.error = 0
-    key = req.key
-    pose = self.readPose(key)
+    key = key
+    pose = self.readPose(dict, key)
     res.pose = pose
     rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(pose))
-    size = self.readSize(key)
+    size = self.readSize(dict, key)
     res.size = size
     rclpy.logging.get_logger('pose_plugin').info("Size: " + str(size))
     return res
