@@ -44,16 +44,16 @@ class PosePlugin(WorldPlugin):
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
 
-  def readPose(self, area: str, key: str):
+  def readPose(self, class_name: str, key: str):
     """
     @brief Reads pose data for a given key from the Redis database.
-    @param area: The area of the target.
+    @param class_name: The class_name of the target.
     @param key: The key identifying the target.
     @return Pose object populated with position and orientation.
     """
 
     pose = Pose()
-    db_pose = self.r.hgetall(area+'/'+key+'/'+'pose')
+    db_pose = self.r.hgetall(class_name+'/'+key+'/'+'pose')
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -77,15 +77,15 @@ class PosePlugin(WorldPlugin):
     self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
 
 
-  def readSize(self, area: str, key: str):
+  def readSize(self, class_name: str, key: str):
     '''
     @brief Reads size (scale) data for a given key from the Redis database.
-    @param area: The area of the target.
+    @param class_name: The class_name of the target.
     @param key: The key identifying the target.
     @return Vector3: object with x, y, and z sizes.
     '''
     size = Vector3()
-    db_size = self.r.hgetall(area+'/'+key)
+    db_size = self.r.hgetall(class_name+'/'+key)
     try:
       size.x = float(db_size['sx'])
       size.y = float(db_size['sy'])
@@ -121,34 +121,34 @@ class PosePlugin(WorldPlugin):
     '''
 
     res = GetPose.Response()
-    if req.area == '':
+    if req.class_name == '':
       if req.key == '':
         self.get_logger().error("Class and Key is empty: ")
         res.error = 1
         return res
       else:
-        req.area = 'targets'
+        req.class_name = 'targets'
         self.get_logger().warning("Class is not specified, using 'targets' as default")
-    if req.key == '' and req.area != '':
-      req.key = req.area
-      req.area = 'targets'
+    if req.key == '' and req.class_name != '':
+      req.key = req.class_name
+      req.class_name = 'targets'
       self.get_logger().warning("Key is empty, using class as key and class as 'targets': " + str(req.key))
 
-    if req.area not in self.targets.keys():
-      self.get_logger().error("Area not found in targets: " + str(self.targets.keys()))
-      self.get_logger().error("Class not found in targets: " + str(req.area))
+    if req.class_name not in self.targets.keys():
+      self.get_logger().error("class_name not found in targets: " + str(self.targets.keys()))
+      self.get_logger().error("Class not found in targets: " + str(req.class_name))
       res.error = 2
       return res
       
-    if req.key not in self.targets[req.area].keys():
-      self.get_logger().error("Key not found in "+req.area+": " + str(req.key))
+    if req.key not in self.targets[req.class_name].keys():
+      self.get_logger().error("Key not found in "+req.class_name+": " + str(req.key))
       res.error = 3
       return res
     res.error = 0
-    pose = self.readPose(req.area, req.key)
+    pose = self.readPose(req.class_name, req.key)
     res.pose = pose
     self.get_logger().info("Pose: " + str(pose))
-    size = self.readSize(req.area, req.key)
+    size = self.readSize(req.class_name, req.key)
     res.size = size
     self.get_logger().info("Size: " + str(size))
     return res
