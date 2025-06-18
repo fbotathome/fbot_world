@@ -1,3 +1,4 @@
+string class_name
 string key
 ---
 int32 error
