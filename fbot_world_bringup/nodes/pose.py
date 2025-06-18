@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rclpy
-import rclpy.logging
 import yaml
 import os
 from scripts.world_plugin import WorldPlugin
@@ -42,8 +41,7 @@ class PosePlugin(WorldPlugin):
     self.get_logger().info(f"File name: {self.config_file_name}")
 
     self.setStaticPose()
-    self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getTargets)
-    self.sitable_server = self.create_service(GetPose, '/fbot_world/get_sitable_pose', self.getSitablePose)
+    self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
 
   def readPose(self, dict: str, key: str):
@@ -104,66 +102,53 @@ class PosePlugin(WorldPlugin):
           key = str(target)+'/' + p_id + '/' + 'pose'
           pipe.hmset(key, pose)
       pipe.execute()
-
-  def getSitablePose(self, req : GetPose.Request, res : GetPose.Response):
-    '''
-    @brief Service callback to return the list of target keys.
-    The function retrieves all keys from the Redis database and returns them in the response.
-    @param req: The service request (not used in this case).
-    @param res: The service response to populate with target keys.
-    @return A filled GetPose.Response object containing the list of target keys.
-    '''
-    res = GetPose.Response()
-    self.get_logger().info("Targets request")
-    res = self.getPose(dict = 'sitable_positions', key = req.key)
-    return res
-
-
-  def getTargets(self, req : GetPose.Request, res : GetPose.Response):
-    '''
-    @brief Service callback to return the list of target keys.
-    The function retrieves all keys from the Redis database and returns them in the response.
-    @param req: The service request (not used in this case).
-    @param res: The service response to populate with target keys.
-    @return A filled GetPose.Response object containing the list of target keys.
-    '''
-    res = GetPose.Response()
-    self.get_logger().info("Targets request")
-    res = self.getPose(dict = 'targets', key = req.key)
-    return res
   
-  def getPose(self, dict: str, key: str):
+  def getPose(self, req: GetPose.Request, res: GetPose.Response):
     '''
     @brief Service callback to return the pose and size for a requested target key. 
     The function checks if the key is valid and retrieves the pose and size from Redis.
     If the key is not found or empty, it returns an error code.
     Error codes: 
       - 0: Success
-      - 1: Key is empty
-      - 2: Key not found in locations
+      - 1: Class and key is empty
+      - 2: Class not found in targets
+      - 3: Key not found in the specified class
     @param req: The service request containing the target key.
     @param res: The service response to populate with pose and size.
     @return A filled GetPose.Response object.
     '''
 
     res = GetPose.Response()
-    self.get_logger().info(f"Pose request: {key}")
-    if key == 'None':
-      rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(key))
-      res.error = 1
-      return res
-    if key not in self.targets[dict].keys():
-      rclpy.logging.get_logger('pose_plugin').error("Key not found in "+dict+": " + str(key))
+    if req.area == '':
+      if req.key == '':
+        self.get_logger().error("Class and Key is empty: ")
+        res.error = 1
+        return res
+      else:
+        req.area = 'targets'
+        self.get_logger().warning("Class is not specified, using 'targets' as default")
+    if req.key == '' and req.area != '':
+      req.key = req.area
+      req.area = 'targets'
+      self.get_logger().warning("Key is empty, using class as key and class as 'targets': " + str(req.key))
+
+    if req.area not in self.targets.keys():
+      self.get_logger().error("Area not found in targets: " + str(self.targets.keys()))
+      self.get_logger().error("Class not found in targets: " + str(req.area))
       res.error = 2
       return res
+      
+    if req.key not in self.targets[req.area].keys():
+      self.get_logger().error("Key not found in "+req.area+": " + str(req.key))
+      res.error = 3
+      return res
     res.error = 0
-    key = key
-    pose = self.readPose(dict, key)
+    pose = self.readPose(req.area, req.key)
     res.pose = pose
-    rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(pose))
-    size = self.readSize(dict, key)
+    self.get_logger().info("Pose: " + str(pose))
+    size = self.readSize(req.area, req.key)
     res.size = size
-    rclpy.logging.get_logger('pose_plugin').info("Size: " + str(size))
+    self.get_logger().info("Size: " + str(size))
     return res
   
 
