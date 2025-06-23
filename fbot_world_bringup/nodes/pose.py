@@ -121,16 +121,16 @@ class PosePlugin(WorldPlugin):
     '''
 
     def setResponseError():
-      res.pose.position.x = float(-999999.999)
-      res.pose.position.y = float(-999999.999)
-      res.pose.position.z = float(-999999.999)
-      res.pose.orientation.x = float(-999999.999)
-      res.pose.orientation.y = float(-999999.999)
-      res.pose.orientation.z = float(-999999.999)
-      res.pose.orientation.w = float(-999999.999)
-      res.size.x = float(-999999.999)
-      res.size.y = float(-999999.999)
-      res.size.z = float(-999999.999)
+      res.pose.position.x = float('NaN')
+      res.pose.position.y = float('NaN')
+      res.pose.position.z = float('NaN')
+      res.pose.orientation.x = float('NaN')
+      res.pose.orientation.y = float('NaN')
+      res.pose.orientation.z = float('NaN')
+      res.pose.orientation.w = float('NaN')
+      res.size.x = float('NaN')
+      res.size.y = float('NaN')
+      res.size.z = float('NaN')
       return res
 
     res = GetPose.Response()
