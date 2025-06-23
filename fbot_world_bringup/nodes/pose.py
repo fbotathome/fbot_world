@@ -120,10 +120,24 @@ class PosePlugin(WorldPlugin):
     @return A filled GetPose.Response object.
     '''
 
+    def setResponseError():
+      res.pose.position.x = float(-999999.999)
+      res.pose.position.y = float(-999999.999)
+      res.pose.position.z = float(-999999.999)
+      res.pose.orientation.x = float(-999999.999)
+      res.pose.orientation.y = float(-999999.999)
+      res.pose.orientation.z = float(-999999.999)
+      res.pose.orientation.w = float(-999999.999)
+      res.size.x = float(-999999.999)
+      res.size.y = float(-999999.999)
+      res.size.z = float(-999999.999)
+      return res
+
     res = GetPose.Response()
     if req.key == '' or req.key == 'None':
       self.get_logger().error("The key is empty.")
       res.error = 1
+      setResponseError()
       return res
     
     else:
@@ -134,11 +148,13 @@ class PosePlugin(WorldPlugin):
       if req.group_set not in self.targets.keys():
         self.get_logger().error("Group Set not found in targets: " + str(self.targets.keys()))
         res.error = 2
+        setResponseError()
         return res 
         
       if req.key not in self.targets[req.group_set].keys():
         self.get_logger().error("Key not found in "+req.group_set+": " + str(req.key))
         res.error = 3
+        setResponseError()
         return res
       res.error = 0
       pose = self.readPose(req.group_set, req.key)
