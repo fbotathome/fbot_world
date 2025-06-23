@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rclpy
-import rclpy.logging
 import yaml
 import os
 from scripts.world_plugin import WorldPlugin
@@ -16,7 +15,7 @@ def readYamlFile(file_path: str = None):
   @return A dictionary containing the 'targets' section of the YAML file.
   """
   with open(file_path, 'r') as file:
-    yaml_data = yaml.safe_load(file)['targets']
+    yaml_data = yaml.safe_load(file)
   return yaml_data
 
 class PosePlugin(WorldPlugin):
@@ -45,15 +44,16 @@ class PosePlugin(WorldPlugin):
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
     self.get_logger().info(f"Pose node started!!!")
 
-  def readPose(self, key: str):
+  def readPose(self, group_set: str, key: str):
     """
     @brief Reads pose data for a given key from the Redis database.
+    @param group_set: The group set of the target.
     @param key: The key identifying the target.
     @return Pose object populated with position and orientation.
     """
 
     pose = Pose()
-    db_pose = self.r.hgetall('target/'+key+'/'+'pose')
+    db_pose = self.r.hgetall(group_set+'/'+key+'/'+'pose')
     pose.position.x = float(db_pose[b'px'])
     pose.position.y = float(db_pose[b'py'])
     pose.position.z = float(db_pose[b'pz'])
@@ -77,14 +77,15 @@ class PosePlugin(WorldPlugin):
     self.config_file_name = self.get_parameter('config_file_name').get_parameter_value().string_value
 
 
-  def readSize(self, key: str):
+  def readSize(self, group_set: str, key: str):
     '''
     @brief Reads size (scale) data for a given key from the Redis database.
+    @param group_set: The group set of the target.
     @param key: The key identifying the target.
     @return Vector3: object with x, y, and z sizes.
     '''
     size = Vector3()
-    db_size = self.r.hgetall(key)
+    db_size = self.r.hgetall(group_set+'/'+key)
     try:
       size.x = float(db_size['sx'])
       size.y = float(db_size['sy'])
@@ -97,14 +98,14 @@ class PosePlugin(WorldPlugin):
     '''
     @brief Stores all target poses as static entries in the Redis database.
     '''
-    poses = self.targets
     with self.r.pipeline() as pipe:
-      for p_id, pose in poses.items():
-        key = 'target/' + p_id + '/' + 'pose'
-        pipe.hmset(key, pose)
+      for target in self.targets.keys():
+        for p_id, pose in self.targets[target].items():
+          key = str(target)+'/' + p_id + '/' + 'pose'
+          pipe.hmset(key, pose)
       pipe.execute()
   
-  def getPose(self, req : GetPose.Request, res : GetPose.Response):
+  def getPose(self, req: GetPose.Request, res: GetPose.Response):
     '''
     @brief Service callback to return the pose and size for a requested target key. 
     The function checks if the key is valid and retrieves the pose and size from Redis.
@@ -112,31 +113,57 @@ class PosePlugin(WorldPlugin):
     Error codes: 
       - 0: Success
       - 1: Key is empty
-      - 2: Key not found in locations
+      - 2: Group set not found in targets
+      - 3: Key not found in the specified group
     @param req: The service request containing the target key.
     @param res: The service response to populate with pose and size.
     @return A filled GetPose.Response object.
     '''
 
+    def setResponseError():
+      res.pose.position.x = float('NaN')
+      res.pose.position.y = float('NaN')
+      res.pose.position.z = float('NaN')
+      res.pose.orientation.x = float('NaN')
+      res.pose.orientation.y = float('NaN')
+      res.pose.orientation.z = float('NaN')
+      res.pose.orientation.w = float('NaN')
+      res.size.x = float('NaN')
+      res.size.y = float('NaN')
+      res.size.z = float('NaN')
+      return res
+
     res = GetPose.Response()
-    self.get_logger().info(f"Pose request: {req.key}")
-    if req.key == 'None':
-      rclpy.logging.get_logger('pose_plugin').error("Key is empty: " + str(req.key))
+    if req.key == '' or req.key == 'None':
+      self.get_logger().error("The key is empty.")
       res.error = 1
+      setResponseError()
       return res
-    if req.key not in self.targets.keys():
-      rclpy.logging.get_logger('pose_plugin').error("Key not found in targets: " + str(req.key))
-      res.error = 2
+    
+    else:
+      if req.group_set == '' or req.group_set == 'None':
+        req.group_set = 'targets'
+        self.get_logger().warning("Class is not specified, using 'targets' as default")
+
+      if req.group_set not in self.targets.keys():
+        self.get_logger().error("Group Set not found in targets: " + str(self.targets.keys()))
+        res.error = 2
+        setResponseError()
+        return res 
+        
+      if req.key not in self.targets[req.group_set].keys():
+        self.get_logger().error("Key not found in "+req.group_set+": " + str(req.key))
+        res.error = 3
+        setResponseError()
+        return res
+      res.error = 0
+      pose = self.readPose(req.group_set, req.key)
+      res.pose = pose
+      self.get_logger().info("Pose: " + str(pose))
+      size = self.readSize(req.group_set, req.key)
+      res.size = size
+      self.get_logger().info("Size: " + str(size))
       return res
-    res.error = 0
-    key = req.key
-    pose = self.readPose(key)
-    res.pose = pose
-    rclpy.logging.get_logger('pose_plugin').info("Pose: " + str(pose))
-    size = self.readSize(key)
-    res.size = size
-    rclpy.logging.get_logger('pose_plugin').info("Size: " + str(size))
-    return res
   
 
 
