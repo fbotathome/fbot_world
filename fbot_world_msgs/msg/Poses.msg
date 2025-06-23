@@ -1,6 +1,3 @@
-string group_set
 string key
----
-int32 error
 geometry_msgs/Pose pose
 geometry_msgs/Vector3 size

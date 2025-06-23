@@ -1,0 +1,4 @@
+string group_set
+---
+int32 error
+fbot_world_msgs/Poses[] poses
