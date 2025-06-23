@@ -4,7 +4,7 @@ import rclpy
 import yaml
 import os
 from scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.msg import Poses
+from fbot_world_msgs.msg import FBOTPoses
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet
 from geometry_msgs.msg import Pose, Vector3
 from ament_index_python.packages import get_package_share_directory
@@ -110,7 +110,7 @@ class PosePlugin(WorldPlugin):
   def getPoseFromSet(self, req: GetPoseFromSet.Request, res: GetPoseFromSet.Response):
     for key in self.targets[req.group_set]:
       self.get_logger().info(f"Key: {key}")
-      poses = Poses()
+      poses = FBOTPoses()
       poses.key = key
       poses.pose = self.readPose(req.group_set, key)
       poses.size = self.readSize(req.group_set, key)
