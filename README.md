@@ -17,7 +17,9 @@
 
 ## Overview
 ######
-```fbot_world``` is a ROS 2 package suite designed for robotic vision applications. It provides real-time object detection, face recognition, person tracking with pose estimation, and vision-language model capabilities for interactive robotics systems. It was designed for the RoboCup@Home and the robot BORIS competition but is adaptable to various robotics scenarios.
+```fbot_world``` is a ROS 2 package suite designed for robotic applications in real world scenarios. 
+
+. It was designed for the RoboCup@Home and the robot BORIS competition but is adaptable to various robotics scenarios.
 
 ---
 
@@ -27,11 +29,10 @@ The system consists of three main packages:
 
 ```
 fbot_world/
-├── 📁 fbot_world/          # Core recognition algorithms
-|   ├── 📁 base_recognition/      # Abstract base class for all recognition modules
-│   ├── 📁 face_recognition/      # Face detection and recognition
-│   ├── 📁 yolov8_recognition/    # Object detection with YOLOv8
-│   └── 📁 yolo_tracker_recognition/ # People tracking
+├── 📁 fbot_world/          # Core fbot_world files
+|   ├── 📁 fbot_world/      # node files
+│   ├── 📁 launch/      # launch files
+│   ├── 📁 scripts/    # script files
 └── 📁 fbot_world_msgs/          # Custom ROS message definitions
 ```
 
@@ -74,79 +75,19 @@ fbot_world/
 
 ## Usage
 
-### Object Detection
+### Pose Node
 ```bash
-# Launch YOLOv8 object detection
-ros2 launch fbot_recognition yolov8_object_recognition.launch.py use_realsense:=True
-
-# Start/stop detection service
-ros2 service call /fbot_vision/fr/object_start std_srvs/srv/Empty
-ros2 service call /fbot_vision/fr/object_stop std_srvs/srv/Empty
+# Launch pose node
+ros2 launch fbot_world pose.launch.py config_file_name:=file_name_without_dot_yaml
 ```
 
-### Person Tracking
+### Pose Writer Node
 ```bash
 # Launch YOLO tracker with pose estimation
-ros2 launch fbot_recognition yolo_tracker_recognition.launch.py use_realsense:=True
- 
-# Start/stop tracking
-ros2 service call /fbot_vision/pt/start std_srvs/srv/Empty
-ros2 service call /fbot_vision/pt/stop std_srvs/srv/Empty
+ros2 run fbot_world pose_writer
 ```
 
-### Face Recognition
-```bash
-# Launch face recognition
-ros2 launch fbot_recognition face_recognition.launch.py
-
-# Introduce a new person
-ros2 service call /fbot_vision/face_recognition/people_introducing \
-    fbot_vision_msgs/srv/PeopleIntroducing "{name: 'John Doe'}"
-```
-
-# Forget an existing person from database
-ros2 service call /fbot_vision/face_recognition/people_forgetting \
-    fbot_vision_msgs/srv/PeopleForgetting "{name: 'John Doe'}"
-```
-
-### Vision Language Model
-```bash
-# Launch VLM service
-ros2 launch fbot_vlm vlm.launch.py
-
-# Ask questions about the current camera view (uses live camera feed)
-ros2 service call /fbot_vision/vlm/question_answering/query \
-    fbot_vision_msgs/srv/VLMQuestionAnswering "{question: 'What do you see?', use_image: true}"
-
-# Ask text-only questions (no image processing)
-ros2 service call /fbot_vision/vlm/question_answering/query \
-    fbot_vision_msgs/srv/VLMQuestionAnswering "{question: 'What is the capital of France?', use_image: false}"
-
-# Ask questions about a specific image (provide custom image)
-ros2 service call /fbot_vision/vlm/question_answering/query \
-    fbot_vision_msgs/srv/VLMQuestionAnswering "{
-        question: 'Describe this image in detail', 
-        use_image: true,
-        image: {
-            header: {stamp: {sec: 0, nanosec: 0}, frame_id: 'camera_link'},
-            height: 480, width: 640, encoding: 'rgb8',
-            is_bigendian: false, step: 1920,
-            data: [/* image data bytes */]
-        }
-    }"
-
-# Get VLM conversation history
-ros2 service call /fbot_vision/vlm/answer_history/query \
-    fbot_vision_msgs/srv/VLMAnswerHistory "{questions_filter: []}"
-
-# Get history for specific questions only
-ros2 service call /fbot_vision/vlm/answer_history/query \
-    fbot_vision_msgs/srv/VLMAnswerHistory "{questions_filter: ['What do you see?', 'Describe the scene']}"
-```
-
----
-
-## fbot_vision message and services
+## fbot_world message and services
 
 ### Topics
 
