@@ -4,7 +4,8 @@ import rclpy
 import yaml
 import os
 from scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.srv import GetPose
+from fbot_world_msgs.msg import FBOTPoses
+from fbot_world_msgs.srv import GetPose, GetPoseFromSet
 from geometry_msgs.msg import Pose, Vector3
 from ament_index_python.packages import get_package_share_directory
 
@@ -42,6 +43,7 @@ class PosePlugin(WorldPlugin):
 
     self.setStaticPose()
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
+    self.pose_server = self.create_service(GetPoseFromSet, '/fbot_world/get_set', self.getPoseFromSet)
     self.get_logger().info(f"Pose node started!!!")
 
   def readPose(self, group_set: str, key: str):
@@ -104,6 +106,16 @@ class PosePlugin(WorldPlugin):
           key = str(target)+'/' + p_id + '/' + 'pose'
           pipe.hmset(key, pose)
       pipe.execute()
+
+  def getPoseFromSet(self, req: GetPoseFromSet.Request, res: GetPoseFromSet.Response):
+    for key in self.targets[req.group_set]:
+      self.get_logger().info(f"Key: {key}")
+      poses = FBOTPoses()
+      poses.key = key
+      poses.pose = self.readPose(req.group_set, key)
+      poses.size = self.readSize(req.group_set, key)
+      res.pose_array.append(poses)
+    return res
   
   def getPose(self, req: GetPose.Request, res: GetPose.Response):
     '''
