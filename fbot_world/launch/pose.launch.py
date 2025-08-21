@@ -12,12 +12,12 @@ def generate_launch_description():
 
     plugin_file_arg = DeclareLaunchArgument(
         'plugin_config',
-        default_value=PathJoinSubstitution([FindPackageShare('fbot_world_bringup'), 'config', 'plugin.yaml']),
+        default_value=PathJoinSubstitution([FindPackageShare('fbot_world'), 'config', 'plugin.yaml']),
         description='Path to the World Plugin parameter file'
     )
 
     pose_node = Node(
-        package='fbot_world_bringup',
+        package='fbot_world',
         executable='pose',
         name='pose',
         parameters=[LaunchConfiguration('plugin_config'),
