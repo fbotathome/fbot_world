@@ -9,7 +9,7 @@
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/fbotathome/fbot_world)](https://github.com/fbotathome/fbot_world/pulls)
 [![Contributors](https://img.shields.io/github/contributors/fbotathome/fbot_world.svg)](https://github.com/fbotathome/fbot_world/graphs/contributors)
 
-**A ROS 2 vision system for robotics applications featuring object detection, face recognition, person tracking, and vision-language model integration.**
+**A ROS 2 world system for robotics applications featuring new poses.**
 
 [Overview](#overview) • [Architecture](#architecture) • [Installation](#installation) • [Usage](#usage) • [fbot_world message and services](#fbot_world-message-and-services) • [Contributing](#contributing)
 
@@ -17,9 +17,9 @@
 
 ## Overview
 ######
-```fbot_world``` is a ROS 2 package suite designed for robotic applications in real world scenarios. 
+```fbot_world``` is a ROS 2 package designed for robotic applications in world map scenarios. This package normally, works load and save new poses too use in many aplications. You can save a pose based in world map.  
 
-. It was designed for the RoboCup@Home and the robot BORIS competition but is adaptable to various robotics scenarios.
+   It was designed for the RoboCup@Home and the robot BORIS competition but is adaptable to various robotics scenarios.  
 
 ---
 
