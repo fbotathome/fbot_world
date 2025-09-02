@@ -17,7 +17,7 @@
 
 ## Overview
 ######
-```fbot_world``` is a ROS 2 package designed for robotic applications in world map scenarios. This package normally, works load and save new poses too use in many aplications. You can save a pose based in world map.  
+```fbot_world``` is a ROS 2 package for managing poses in world map scenarios. It allows loading and saving poses for reuse across different robotic applications.  
 
    It was designed for the RoboCup@Home and the robot BORIS competition but is adaptable to various robotics scenarios.  
 
