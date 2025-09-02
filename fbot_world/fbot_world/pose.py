@@ -44,8 +44,8 @@ class PosePlugin(WorldPlugin):
 
     self.setStaticPose()
     self.pose_server = self.create_service(GetPose, '/fbot_world/get_pose', self.getPose)
-    self.Set_server = self.create_service(GetPoseFromSet, '/fbot_world/get_set', self.getPoseFromSet)
-    self.Sets_names = self.create_service(GetSets, '/fbot_world/get_groups_names', self.getGroupNames)
+    self.set_server = self.create_service(GetPoseFromSet, '/fbot_world/get_set', self.getPoseFromSet)
+    self.sets_names = self.create_service(GetSets, '/fbot_world/get_groups_names', self.getGroupNames)
     self.get_logger().info(f"Pose node started!!!")
 
   def readPose(self, group_set: str, key: str):
