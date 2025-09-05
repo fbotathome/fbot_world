@@ -5,6 +5,7 @@ import yaml
 import os
 
 from rclpy.exceptions import ROSInterruptException
+from rclpy.wait_for_message import wait_for_message
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from collections import OrderedDict
 from rclpy.node import Node
@@ -67,42 +68,35 @@ class PoseWriter (Node):
         self.declare_parameter('~pose_topic', '/amcl_pose')
         self.pose_topic = self.get_parameter('~pose_topic').get_parameter_value().string_value
 
-        self.pose_sub = self.create_subscription(PoseWithCovarianceStamped, self.pose_topic, self.pose_callback, 10)
-
-    def pose_callback(self, msg: PoseWithCovarianceStamped) -> None:
-        '''
-        @brief Callback function for the pose subscriber.
-        @param msg: The PoseWithCovarianceStamped message received from the topic.
-        '''
-        self.get_logger().info(f"Received msg: {msg.pose.pose.position.x}, {msg.pose.pose.position.y}, {msg.pose.pose.position.z}")
-        self.current_pose = msg.pose.pose
-
     def save_pose(self) -> None:
         '''
         @brief Save the current pose in the specified topic to a yaml file.
         '''
 
         while rclpy.ok():
-            rclpy.spin_once(self)
+            success, message = wait_for_message(msg_type=PoseWithCovarianceStamped, node=self, topic="/amcl_pose", time_to_wait=2.0)
+            current_pose = message.pose.pose if success else None
 
+
+            self.get_logger().info("Ready to save a new pose.")
             pose_name = input("Move the robot to the desired pose and enter its name (e.g., 'garbage_1', 'exit'): ")
 
             if not pose_name:
                 self.get_logger().warning("No name provided, skipping pose.")
                 continue
 
-            if not hasattr(self, 'current_pose'):
-                self.get_logger().warning("No pose received from topic yet.")
-                continue
+                if current_pose is None:
+                    self.get_logger().warning("No pose received from topic yet.")
+                    continue
 
             self.poses['targets'][pose_name] = OrderedDict([
-            ('px', self.current_pose.position.x),
-            ('py', self.current_pose.position.y),
-            ('pz', self.current_pose.position.z),
-            ('ox', self.current_pose.orientation.x),
-            ('oy', self.current_pose.orientation.y),
-            ('oz', self.current_pose.orientation.z),
-            ('ow', self.current_pose.orientation.w)
+            ('px', current_pose.position.x),
+            ('py', current_pose.position.y),
+            ('pz', current_pose.position.z),
+            ('ox', current_pose.orientation.x),
+            ('oy', current_pose.orientation.y),
+            ('oz', current_pose.orientation.z),
+            ('ow', current_pose.orientation.w)
         ])
 
             self.get_logger().info(f"Pose '{pose_name}' saved.")
@@ -112,7 +106,7 @@ class PoseWriter (Node):
                 if save_now == 'n':
                     self.write_to_yaml()
                     self.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
-                    return
+                    break
 
                 elif save_now == 'y':
                     break
@@ -153,6 +147,7 @@ def main(args=None) -> None:
         rclpy.init(args=args)
         saver = PoseWriter()
         saver.save_pose()
+        rclpy.spin_once(saver)
         saver.destroy_node()
         rclpy.try_shutdown()
     except ROSInterruptException:
