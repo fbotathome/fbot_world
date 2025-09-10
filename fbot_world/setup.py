@@ -13,7 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'fbot_world'), glob.glob('fbot_world/*.py')),
         (os.path.join('share', package_name, 'launch'), glob.glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'scripts'), glob.glob('scripts/*.py')),
+        (os.path.join('share', package_name, 'world_scripts'), glob.glob('world_scripts/*.py')),
         (os.path.join('share', package_name, 'config'), glob.glob('config/*.yaml'))
 
     ],

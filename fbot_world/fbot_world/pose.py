@@ -3,11 +3,11 @@
 import rclpy
 import yaml
 import os
-from scripts.world_plugin import WorldPlugin
+
+from world_scripts.world_plugin import WorldPlugin
 from fbot_world_msgs.msg import FBOTPoses
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets
 from geometry_msgs.msg import Pose, Vector3
-from std_msgs.msg  import Empty
 from ament_index_python.packages import get_package_share_directory
 
 def readYamlFile(file_path: str = None):
