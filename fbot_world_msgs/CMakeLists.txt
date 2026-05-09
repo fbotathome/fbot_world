@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetPose.srv"
   "srv/GetPoseFromSet.srv"
   "srv/GetSets.srv"
+  "srv/GetRoom.srv"
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs vision_msgs
 )
 
