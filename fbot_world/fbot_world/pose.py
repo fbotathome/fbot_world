@@ -7,9 +7,9 @@ import numpy as np
 from scripts.world_plugin import WorldPlugin
 from fbot_world_msgs.msg import FBOTPoses
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
-from geometry_msgs.msg import Pose, Vector3
-from std_msgs.msg  import Empty
+from geometry_msgs.msg import Pose, Vector3, PoseWithCovarianceStamped
 from ament_index_python.packages import get_package_share_directory
+from rclpy.wait_for_message import wait_for_message
   
 
 def readYamlFile(file_path: str = None):
@@ -230,14 +230,17 @@ class PosePlugin(WorldPlugin):
     Executes the state by compare if the point is inside a polygon, and saves the points inside blackboard['inside_polygon'].
     @return Execution outcome (SUCCEED, ABORT).
     """
-    for room in self.targets['rooms'].items():
-      self.get_logger().info(f"Room: {room[0]}, Polygon: {room[1]}")
-      self.polygon = np.array(room[1],dtype= np.float32)
-      self.itens_points = req.pose.pose.pose.position
-      if self.is_point_in_area([self.itens_points.x, self.itens_points.y]):
-          res.response = [room[0]]
-          self.get_logger().info(f"Room: {room[0]}")
-          return res
+    
+    success, msg = wait_for_message(
+            msg_type=PoseWithCovarianceStamped, node=self, topic='/amcl_pose', time_to_wait=10
+        )
+    if success:
+      for room in self.targets['rooms'].items():
+        self.polygon = np.array(room[1],dtype= np.float32)
+        self.itens_points = msg.pose.pose.position
+        if self.is_point_in_area([self.itens_points.x, self.itens_points.y]):
+            res.response = [room[0]]
+            return res
     res.response = ['None']
     return res
       

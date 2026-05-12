@@ -1,4 +1,4 @@
-geometry_msgs/PoseWithCovarianceStamped pose
+std_msgs/Empty empty
 ---
 string[] response
 
