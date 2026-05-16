@@ -1,0 +1,2 @@
+fbot_world_msgs/FBOTVertices room
+fbot_world_msgs/FBOTVertices[] objects

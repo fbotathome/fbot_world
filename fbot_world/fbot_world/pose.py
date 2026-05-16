@@ -5,11 +5,10 @@ import yaml
 import os
 import numpy as np
 from scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.msg import FBOTPoses
+from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, FBOTVertices
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
-from geometry_msgs.msg import Pose, Vector3, PoseWithCovarianceStamped
+from geometry_msgs.msg import Pose, Vector3, Point
 from ament_index_python.packages import get_package_share_directory
-from rclpy.wait_for_message import wait_for_message
   
 
 def readYamlFile(file_path: str = None):
@@ -69,6 +68,7 @@ class PosePlugin(WorldPlugin):
     pose.orientation.z = float(db_pose[b'oz'])
     pose.orientation.w = float(db_pose[b'ow'])  
     
+    
     return pose
 
   def declareParameters(self):
@@ -105,10 +105,9 @@ class PosePlugin(WorldPlugin):
     @brief: Stores all target poses as static entries in the Redis database.
     '''
     with self.r.pipeline() as pipe:
-      for target in self.targets.keys():
-        if target == 'rooms':
-          break
-        for p_id, pose in self.targets[target].items():
+      self.get_logger().info(f"Setting static poses in Redis for targets: {self.targets['poses'].keys()}")
+      for target in self.targets['poses'].keys():
+        for p_id, pose in self.targets['poses'][target].items():
           key = str(target)+'/' + p_id + '/' + 'pose'
           pipe.hmset(key, pose)
       pipe.execute()
@@ -139,36 +138,45 @@ class PosePlugin(WorldPlugin):
     If the group set is not found or empty, it returns a 'NaN.
     Error codes: 
       - 0: Success
-      - 1: Group set is empty
+      - 1: Group set is empty, return all poses in 'targets'
       - 2: Group set not found in targets
+      - 3: Exception occurred
     @param req: The service request containing the group set.
     @param res: The service response with a array populate with poses and sizes.
     @return: A filled GetPoseFromSet.Response object.
     ''' 
-    
-    if req.group_set in self.targets.keys():
-      for key in self.targets[req.group_set]:
+    try:
+      if req.group_set in self.targets['poses'].keys():
+        for key in self.targets['poses'][req.group_set]:
+          poses = FBOTPoses()
+          poses.key = key
+          poses.pose = self.readPose(req.group_set, key)
+          poses.size = self.readSize(req.group_set, key)
+          res.error = 0
+          res.pose_array.append(poses)
+
+      elif req.group_set == '' or req.group_set == 'None':
+        res.error = 1
+        for key in self.targets['poses']['targets'].keys():
+          poses = FBOTPoses()
+          poses.key = key
+          poses.pose = self.readPose('targets', key)
+          poses.size = self.readSize('targets', key)
+          res.pose_array.append(poses)
+
+      else:
         poses = FBOTPoses()
-        poses.key = key
-        poses.pose = self.readPose(req.group_set, key)
-        poses.size = self.readSize(req.group_set, key)
-        res.error = 0
+        poses.key = 'NaN'
+        poses.pose, poses.size = self.setResponseError()
         res.pose_array.append(poses)
-
-    elif req.group_set == '' or req.group_set == 'None':
+        res.error = 2
+    except Exception as e:
+      self.get_logger().error(f"Error in getPoseFromSet: {e}")
       poses = FBOTPoses()
       poses.key = 'NaN'
       poses.pose, poses.size = self.setResponseError()
       res.pose_array.append(poses)
-      res.error = 1
-
-    else:
-      poses = FBOTPoses()
-      poses.key = 'NaN'
-      poses.pose, poses.size = self.setResponseError()
-      res.pose_array.append(poses)
-      res.error = 2
-      
+      res.error = 3
     return res
   
   def getPose(self, req: GetPose.Request, res: GetPose.Response):
@@ -217,12 +225,38 @@ class PosePlugin(WorldPlugin):
 
   def getGroupNames(self, req: GetSets.Request, res: GetSets.Response):
     '''
-    @brief: A service that returns all groups names in yaml file
+    @brief: A service that returns all poses and rooms names with postions and places in yaml file
     @param req: The service request
     @param res: The service response
-    @return: A array with all group names
+    @return: A array with all poses names and rooms names with postions and places in yaml file
     '''
-    res.response = self.targets.keys()
+    
+    for target in self.targets['poses'].keys():
+      for key in self.targets['poses'][target].keys():
+        pose = FBOTPoses()
+        pose.key = key
+        pose.pose = self.readPose(target, key)
+        res.poses.append(pose)
+    for room in self.targets['rooms'].keys():
+      room_ = FBOTRooms()
+      room_.room.key = room
+      for vertice in self.targets['rooms'][room]['vertices']:
+        point = Point()
+        point.x = vertice[0]
+        point.y = vertice[1]
+        point.z = 0.0
+        room_.room.points.append(point)
+      for key in self.targets['rooms'][room]['places'].keys():
+        place = FBOTVertices()
+        place.key = key
+        for vertice in self.targets['rooms'][room]['vertices']:
+          point = Point()
+          point.x = vertice[0]
+          point.y = vertice[1]
+          point.z = 0.0
+          place.points.append(point)
+        room_.objects.append(place)
+      res.rooms.append(room_)
     return res
   
   def getRoom(self, req: GetRoom.Request, res: GetRoom.Response):
@@ -230,21 +264,23 @@ class PosePlugin(WorldPlugin):
     Executes the state by compare if the point is inside a polygon, and saves the points inside blackboard['inside_polygon'].
     @return Execution outcome (SUCCEED, ABORT).
     """
-    
-    success, msg = wait_for_message(
-            msg_type=PoseWithCovarianceStamped, node=self, topic='/amcl_pose', time_to_wait=10
-        )
-    if success:
-      for room in self.targets['rooms'].items():
-        self.polygon = np.array(room[1],dtype= np.float32)
-        self.itens_points = msg.pose.pose.position
-        if self.is_point_in_area([self.itens_points.x, self.itens_points.y]):
-            res.response = [room[0]]
-            return res
-    res.response = ['None']
+    pose = Pose()
+    pose = req.pose
+    for room in self.targets['rooms'].items():
+      polygon = np.array(room[1]['vertices'],dtype= np.float32)
+      self.itens_points = pose.position
+      if self.is_point_in_area(polygon, [self.itens_points.x, self.itens_points.y]):
+          for place in room[1]['places'].items():
+            subpolygon = np.array(place[1],dtype= np.float32)
+            if self.is_point_in_area(subpolygon, [self.itens_points.x, self.itens_points.y]):
+              res.response = [room[0], place[0]]
+              return res
+          res.response = [room[0], 'None']
+          return res
+    res.response = ['None', 'None']
     return res
       
-  def is_point_in_area(self, point) -> bool:
+  def is_point_in_area(self, polygon, point) -> bool:
         """
         @brief A function thats verify if a point are inside a area.
         @param point: Point to verify.
@@ -253,12 +289,12 @@ class PosePlugin(WorldPlugin):
         x, y = point[0], point[1]
         inside = False
         
-        n = len(self.polygon)
+        n = len(polygon)
         j = n - 1  # Inicia com o último vértice para testar a aresta que fecha o polígono
         
         for i in range(n):
-            xi, yi = self.polygon[i][0], self.polygon[i][1]
-            xj, yj = self.polygon[j][0], self.polygon[j][1]
+            xi, yi = polygon[i][0], polygon[i][1]
+            xj, yj = polygon[j][0], polygon[j][1]
             
             # Condição 1: O ponto Y do robô está entre os Ys da parede?
             # Condição 2: A parede cruza o raio à direita da posição X do robô?
@@ -271,29 +307,7 @@ class PosePlugin(WorldPlugin):
             j = i  # Avança para a próxima aresta
             
         return inside
-    
-  # def is_point_in_area(self, point) -> bool:
-  #     """
-  #     @brief A function thats verify if a point are inside a area.
-  #     @param point: Point to verify.
-  #     @return a bool param, if the intersections are a pair value return true, else, return false.
-  #     """
-  #     intersections = 0
-
-  #     for i in range(len(self.polygon)):
-  #         ps1 = self.polygon[i]
-  #         ps2 = None
-  #         if i == len(self.polygon)-1:
-  #             ps2 = self.polygon[0]
-  #         else:
-  #             ps2 = self.polygon[i+1]
-  #         p_end = point.copy()
-  #         p_end[0] = max(self.polygon[:,0])
-  #         self.get_logger().info(f"ps1: {ps1}, ps2: {ps2}, point: {point}, p_end: {p_end}")
-  #         if self.intersect(point,p_end,ps1, ps2):
-  #             intersections+=1
-  #     return intersections % 2 == 1
-      
+       
   def intersect(self, A,B,C,D):
       return self.ccw(A,C,D) != self.ccw(B,C,D) and self.ccw(A,B,C) != self.ccw(A,B,D)
   
