@@ -94,7 +94,8 @@ ros2 run fbot_world pose_writer
 |---------|------|-------------|
 | `/fbot_world/get_pose` | [`GetPose`](fbot_world_msgs/srv/GetPose.srv) | Service callback to return the pose and size for a requested target key |
 | `/fbot_world/get_set` | [`GetPoseFromSet`](fbot_world_msgs/srv/GetPoseFromSet.srv) | Service callback to return all poses for a requested group name key |
-| `/fbot_world/get_groups_names` | [`GetSets`](fbot_world_msgs/srv/GetSets.srv) | Service callback to return all gorup names in redis |
+| `/fbot_world/get_groups_names` | [`GetSets`](fbot_world_msgs/srv/GetSets.srv) | Service callback to return all gorup names in poses and rooms names with postions and objetcs in yaml file |
+| `/fbot_world/get_room ` | [`GetRoom`](fbot_world_msgs/srv/GetRoom.srv) | Service that returns the room and place name where the robot is, based on its current position |
 
 ---
 

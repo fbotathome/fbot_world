@@ -225,10 +225,10 @@ class PosePlugin(WorldPlugin):
 
   def getGroupNames(self, req: GetSets.Request, res: GetSets.Response):
     '''
-    @brief: A service that returns all poses and rooms names with postions and places in yaml file
+    @brief: A service that returns all poses and rooms names with postions and objetcs in yaml file
     @param req: The service request
     @param res: The service response
-    @return: A array with all poses names and rooms names with postions and places in yaml file
+    @return: A array with all poses names and rooms names with postions and objetcs in yaml file
     '''
     
     for target in self.targets['poses'].keys():
@@ -246,7 +246,7 @@ class PosePlugin(WorldPlugin):
         point.y = vertice[1]
         point.z = 0.0
         room_.room.points.append(point)
-      for key in self.targets['rooms'][room]['places'].keys():
+      for key in self.targets['rooms'][room]['objetcs'].keys():
         place = FBOTVertices()
         place.key = key
         for vertice in self.targets['rooms'][room]['vertices']:
@@ -261,7 +261,10 @@ class PosePlugin(WorldPlugin):
   
   def getRoom(self, req: GetRoom.Request, res: GetRoom.Response):
     """
-    Executes the state by compare if the point is inside a polygon, and saves the points inside blackboard['inside_polygon'].
+    @brief: A service that returns the room and place name where the robot is, based on its current position.
+    The function checks if the pose is within any of the defined rooms and places in the YAML configuration.
+    @param req: The service request containing the robot's current pose.
+    @param res: The service response to populate with the room and place names.
     @return Execution outcome (SUCCEED, ABORT).
     """
     pose = Pose()
@@ -270,7 +273,7 @@ class PosePlugin(WorldPlugin):
       polygon = np.array(room[1]['vertices'],dtype= np.float32)
       self.itens_points = pose.position
       if self.is_point_in_area(polygon, [self.itens_points.x, self.itens_points.y]):
-          for place in room[1]['places'].items():
+          for place in room[1]['objetcs'].items():
             subpolygon = np.array(place[1],dtype= np.float32)
             if self.is_point_in_area(subpolygon, [self.itens_points.x, self.itens_points.y]):
               res.response = [room[0], place[0]]
