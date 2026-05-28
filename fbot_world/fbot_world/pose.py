@@ -5,7 +5,7 @@ import yaml
 import os
 import numpy as np
 from scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, FBOTVertices
+from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, DBPose
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
 from geometry_msgs.msg import Pose, Vector3, Point
 from ament_index_python.packages import get_package_share_directory
@@ -205,13 +205,13 @@ class PosePlugin(WorldPlugin):
         req.group_set = 'targets'
         self.get_logger().warning("Class is not specified, using 'targets' as default")
 
-      if req.group_set not in self.targets.keys():
-        self.get_logger().error("Group Set not found in targets: " + str(self.targets.keys()))
+      if req.group_set not in self.targets['poses'].keys():
+        self.get_logger().error("Group Set not found in targets: " + str(self.targets['poses'].keys()))
         res.error = 2
         res.pose, res.size = self.setResponseError()
         return res 
         
-      if req.key not in self.targets[req.group_set].keys():
+      if req.key not in self.targets['poses'][req.group_set].keys():
         self.get_logger().error("Key not found in "+req.group_set+": " + str(req.key))
         res.error = 3
         res.pose, res.size = self.setResponseError()
@@ -232,30 +232,21 @@ class PosePlugin(WorldPlugin):
     '''
     
     for target in self.targets['poses'].keys():
+      pose = DBPose()
+      pose.type = target
       for key in self.targets['poses'][target].keys():
-        pose = FBOTPoses()
-        pose.key = key
-        pose.pose = self.readPose(target, key)
-        res.poses.append(pose)
+        pose.poses.append(key)
+      res.poses.append(pose)
     for room in self.targets['rooms'].keys():
       room_ = FBOTRooms()
-      room_.room.key = room
-      for vertice in self.targets['rooms'][room]['vertices']:
-        point = Point()
-        point.x = vertice[0]
-        point.y = vertice[1]
-        point.z = 0.0
-        room_.room.points.append(point)
-      for key in self.targets['rooms'][room]['objetcs'].keys():
-        place = FBOTVertices()
-        place.key = key
-        for vertice in self.targets['rooms'][room]['vertices']:
-          point = Point()
-          point.x = vertice[0]
-          point.y = vertice[1]
-          point.z = 0.0
-          place.points.append(point)
-        room_.objects.append(place)
+      room_.room = room
+      if 'objetcs' in self.targets['rooms'][room].keys():
+        for object in self.targets['rooms'][room]['objetcs'].keys():
+          room_.objects.append(object)
+      if 'poses' in self.targets['rooms'][room].keys():
+        for pose in self.targets['rooms'][room]['poses']:
+          room_.poses.append(pose)
+          self.get_logger().info(f"Room {room} has poses: {self.targets['rooms'][room]['poses']}")
       res.rooms.append(room_)
     return res
   

@@ -1,4 +1,4 @@
 std_msgs/Empty empty
 ---
-fbot_world_msgs/FBOTPoses[] poses
+fbot_world_msgs/DBPose[] poses
 fbot_world_msgs/FBOTRooms[] rooms
