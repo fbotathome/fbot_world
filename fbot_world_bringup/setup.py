@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'pose = nodes.pose:main',
             'pose_writer = nodes.pose_writer:main',
+            'place_pose_writer = nodes.place_pose_writer:main',
             ],
     },
 )
