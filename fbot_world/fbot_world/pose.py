@@ -40,7 +40,7 @@ class PosePlugin(WorldPlugin):
     self.readParameters()
     ws_dir = os.path.abspath(os.path.join(get_package_share_directory('fbot_world'), '../../../..'))
     self.file_path = os.path.join(ws_dir, "src", "fbot_world","fbot_world", "config", self.config_file_name + '.yaml')
-    self.targets = readYamlFile(self.file_path)
+    self.loadTargets()
     self.get_logger().info(f"File name: {self.config_file_name}")
 
     self.setStaticPose()
@@ -49,6 +49,16 @@ class PosePlugin(WorldPlugin):
     self.sets_names = self.create_service(GetSets, '/fbot_world/get_groups_names', self.getGroupNames)
     self.room_server = self.create_service(GetRoom, '/fbot_world/get_room', self.getRoom)
     self.get_logger().info(f"Pose node started!!!")
+
+  def loadTargets(self):
+    content = readYamlFile(self.file_path)
+    if 'poses' not in content:
+      self.targets = {
+        'poses': content,
+        'rooms': {}
+      }
+    else:
+      self.targets = content
 
   def readPose(self, group_set: str, key: str):
     """
@@ -225,10 +235,10 @@ class PosePlugin(WorldPlugin):
 
   def getGroupNames(self, req: GetSets.Request, res: GetSets.Response):
     '''
-    @brief: A service that returns all poses and rooms names with postions and objetcs in yaml file
+    @brief: A service that returns all poses and rooms names with postions and objects in yaml file
     @param req: The service request
     @param res: The service response
-    @return: A array with all poses names and rooms names with postions and objetcs in yaml file
+    @return: A array with all poses names and rooms names with postions and objects in yaml file
     '''
     
     for target in self.targets['poses'].keys():
@@ -240,8 +250,8 @@ class PosePlugin(WorldPlugin):
     for room in self.targets['rooms'].keys():
       room_ = FBOTRooms()
       room_.room = room
-      if 'objetcs' in self.targets['rooms'][room].keys():
-        for object in self.targets['rooms'][room]['objetcs'].keys():
+      if 'objects' in self.targets['rooms'][room].keys():
+        for object in self.targets['rooms'][room]['objects'].keys():
           room_.objects.append(object)
       if 'poses' in self.targets['rooms'][room].keys():
         for pose in self.targets['rooms'][room]['poses']:
@@ -264,7 +274,7 @@ class PosePlugin(WorldPlugin):
       polygon = np.array(room[1]['vertices'],dtype= np.float32)
       self.itens_points = pose.position
       if self.is_point_in_area(polygon, [self.itens_points.x, self.itens_points.y]):
-          for place in room[1]['objetcs'].items():
+          for place in room[1]['objects'].items():
             subpolygon = np.array(place[1],dtype= np.float32)
             if self.is_point_in_area(subpolygon, [self.itens_points.x, self.itens_points.y]):
               res.response = [room[0], place[0]]

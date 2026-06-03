@@ -112,7 +112,7 @@ rooms:
         - 1.0
       - - 1.0
         - -1.0
-    objetcs:
+    objects:
       desk:
         - - 10.0
           - 10.0
@@ -132,7 +132,7 @@ rooms:
         - 1.0
       - - 0.0
         - 1.0
-    objetcs:
+    objects:
       bed:
         - - 0.0
           - 0.0
@@ -152,7 +152,7 @@ rooms:
         - 1.0
       - - 0.0
         - 1.0
-    objetcs:
+    objects:
       sink:
         - - 0.0
           - 0.0
