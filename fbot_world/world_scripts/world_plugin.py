@@ -12,7 +12,7 @@ class WorldPlugin(Node):
     and sets up the connection accordingly.
     '''
      
-    def __init__(self, packageName='fbot_world_bringup', nodeName='world_plugin'):
+    def __init__(self, packageName='fbot_world', nodeName='world_plugin'):
         super().__init__(nodeName)
         self.world_plugin_declareParameters()
         self.world_plugin_readParameters()

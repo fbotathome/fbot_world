@@ -1,7 +1,7 @@
 To run pose.launch.py you need the FBOT_BRINGUP package. The config file example is:
 
 pose:
-  package_name: fbot_world_bringup
+  package_name: fbot_world
   executable: launch/pose.launch.py
   enable: 'true'
   parameters:
