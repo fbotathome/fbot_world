@@ -26,9 +26,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'pose = nodes.pose:main',
-            'pose_writer = nodes.pose_writer:main',
-            'place_pose_writer = nodes.place_pose_writer:main',
+            'pose = fbot_world.pose:main',
+            'pose_writer = fbot_world.pose_writer:main',
+            'place_pose_writer = fbot_world.place_pose_writer:main',
             ],
     },
 )
