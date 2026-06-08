@@ -29,6 +29,7 @@ setup(
             'pose = fbot_world.pose:main',
             'pose_writer = fbot_world.pose_writer:main',
             'place_pose_writer = fbot_world.place_pose_writer:main',
+            'room_writer = fbot_world.room_writer:main',
             ],
     },
 )

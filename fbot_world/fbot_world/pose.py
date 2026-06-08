@@ -5,6 +5,7 @@ import yaml
 import os
 import numpy as np
 from scripts.world_plugin import WorldPlugin
+from fbot_world import marker_utils
 from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, DBPose
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
 from geometry_msgs.msg import Pose, Vector3, Point
@@ -89,13 +90,11 @@ class PosePlugin(WorldPlugin):
   # ------------------------------------------------------------------
 
   def _make_color(self, rgba: tuple) -> ColorRGBA:
-    c = ColorRGBA()
-    c.r, c.g, c.b, c.a = rgba
-    return c
+    return marker_utils.make_color(rgba)
 
   def _make_lifetime_forever(self) -> Duration:
     """Duration(sec=0, nanosec=0) means the marker lives forever."""
-    return Duration(sec=0, nanosec=0)
+    return marker_utils.lifetime_forever()
 
   def _polygon_to_line_strip_marker(
     self,
@@ -116,33 +115,7 @@ class PosePlugin(WorldPlugin):
     @param line_width: Width of the lines in meters.
     @return: Populated Marker message.
     """
-    m = Marker()
-    m.header.frame_id = 'map'
-    m.ns = ns
-    m.id = marker_id
-    m.type = Marker.LINE_STRIP
-    m.action = Marker.ADD
-    m.scale.x = line_width
-    m.color = self._make_color(color)
-    m.lifetime = self._make_lifetime_forever()
-    m.pose.orientation.w = 1.0
-
-    for v in polygon:
-      p = Point()
-      p.x = float(v[0])
-      p.y = float(v[1])
-      p.z = z
-      m.points.append(p)
-
-    # Close the polygon by repeating the first vertex
-    if polygon:
-      p = Point()
-      p.x = float(polygon[0][0])
-      p.y = float(polygon[0][1])
-      p.z = z
-      m.points.append(p)
-
-    return m
+    return marker_utils.polygon_line_strip(polygon, marker_id, ns, color, z=z, line_width=line_width)
 
   def _polygon_to_fill_marker(
     self,
@@ -162,34 +135,7 @@ class PosePlugin(WorldPlugin):
     @param z: Height at which to draw the fill.
     @return: Populated Marker message.
     """
-    m = Marker()
-    m.header.frame_id = 'map'
-    m.ns = ns + '_fill'
-    m.id = marker_id
-    m.type = Marker.TRIANGLE_LIST
-    m.action = Marker.ADD
-    m.scale.x = 1.0
-    m.scale.y = 1.0
-    m.scale.z = 1.0
-    # Make fill slightly more transparent
-    fill_color = (color[0], color[1], color[2], color[3] * 0.6)
-    m.color = self._make_color(fill_color)
-    m.lifetime = self._make_lifetime_forever()
-    m.pose.orientation.w = 1.0
-
-    arr = np.array(polygon, dtype=np.float32)
-    cx, cy = arr[:, 0].mean(), arr[:, 1].mean()
-    n = len(arr)
-    for i in range(n):
-      j = (i + 1) % n
-      for vx, vy in [(cx, cy), (arr[i][0], arr[i][1]), (arr[j][0], arr[j][1])]:
-        p = Point()
-        p.x = float(vx)
-        p.y = float(vy)
-        p.z = z
-        m.points.append(p)
-
-    return m
+    return marker_utils.polygon_fill(polygon, marker_id, ns, color, z=z)
 
   def _text_marker(
     self,
@@ -212,25 +158,10 @@ class PosePlugin(WorldPlugin):
     @param text_size: Size of the text in meters.
     @return: Populated Marker message.
     """
-    m = Marker()
-    m.header.frame_id = 'map'
-    m.ns = ns + '_text'
-    m.id = marker_id
-    m.type = Marker.TEXT_VIEW_FACING
-    m.action = Marker.ADD
-    m.pose.position.x = float(position[0])
-    m.pose.position.y = float(position[1])
-    m.pose.position.z = z
-    m.pose.orientation.w = 1.0
-    m.scale.z = text_size
-    m.color = self._make_color((1.0, 1.0, 1.0, 1.0))  # always white for readability
-    m.lifetime = self._make_lifetime_forever()
-    m.text = text
-    return m
+    return marker_utils.text_marker(text, position, marker_id, ns, z=z, text_size=text_size)
 
   def _centroid(self, polygon: list) -> tuple:
-    arr = np.array(polygon, dtype=np.float32)
-    return float(arr[:, 0].mean()), float(arr[:, 1].mean())
+    return marker_utils.centroid(polygon)
 
   def _publish_debug_markers_once(self):
     """
