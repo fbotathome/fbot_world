@@ -76,15 +76,56 @@ fbot_world/
 ## Usage
 
 ### Pose Node
+Loads a poses/rooms YAML file and serves it through the `/fbot_world/*` services
+(see the table below). It also publishes RViz markers of every room and object
+sub-area on `/fbot_world/debug_markers`, and answers "which room am I in?" queries
+via `/fbot_world/get_room`.
 ```bash
 # Launch pose node
 ros2 launch fbot_world pose.launch.py config_file_name:=file_name_without_dot_yaml
 ```
 
 ### Pose Writer Node
+Interactively records the robot's **base poses** and saves them under the
+`targets` group of a YAML file. Drive/teleop the robot to a spot, give the pose a
+name, and the current `/amcl_pose` is captured (position + orientation). New poses
+are appended to the chosen file, so existing entries are preserved.
 ```bash
-# Launch YOLO tracker with pose estimation
 ros2 run fbot_world pose_writer
+```
+
+### Place Pose Writer Node
+Records fixed **end-effector "place" poses** (e.g. a shelf or bin drop point) under
+the `place_poses` group. It reads the gripper pose from TF (in the `map` frame) and
+**disables arm torque** so you can hand-guide the arm to the target, name it, and
+capture it; torque is re-enabled on exit.
+
+> ⚠️ The arm goes limp when torque is cut — hold it before confirming the prompt.
+
+Configurable via parameters: `reference_frame` (default `map`), `ee_frame`
+(default `wx200/ee_gripper_link`), `group_set` (default `place_poses`),
+`robot_name` (default `wx200`) and `torque_group` (default `arm`).
+```bash
+ros2 run fbot_world place_pose_writer
+```
+
+### Room Writer Node
+Annotates **room boundaries and object sub-areas** by clicking points in RViz, and
+writes them to the `rooms` section of a YAML file — the same structure the Pose
+Node loads (used by `/fbot_world/get_room`). Only the `rooms` section is written;
+any existing `poses`/`targets` are left untouched.
+
+Workflow: launch navigation with your map and RViz, run the node, then use the
+RViz **Publish Point** tool to click each corner of a room. The in-progress polygon
+is previewed live; when you close it, the finished area is drawn filled, labelled
+and coloured. You can then type the pose names that belong to the room and draw any
+object sub-areas the same way.
+
+In RViz, add a **MarkerArray** display on `/room_writer/preview` (fixed frame
+`map`). Terminal commands while drawing: `Enter` closes the polygon, `u` undoes the
+last point, `r` resets, `a` aborts.
+```bash
+ros2 run fbot_world room_writer
 ```
 
 ## fbot_world message and services
