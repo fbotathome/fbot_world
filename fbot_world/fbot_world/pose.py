@@ -505,7 +505,6 @@ class PosePlugin(WorldPlugin):
       if 'poses' in self.targets['rooms'][room].keys():
         for pose in self.targets['rooms'][room]['poses']:
           room_.poses.append(pose)
-          self.get_logger().info(f"Room {room} has poses: {self.targets['rooms'][room]['poses']}")
       res.rooms.append(room_)
     return res
   
