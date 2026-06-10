@@ -259,9 +259,8 @@ class PosePlugin(WorldPlugin):
 
   def applyNewConfigurations(self):
     """
-    @brief: Applies new configurations loaded from the YAML file.
+    @brief: Clear the redis database and applies new configurations loaded from the YAML file.
     """
-    self.get_logger().info(f'Dados atuais: {self.data_config}')
     self.r.flushdb(asynchronous=True)
     self.targets = readYamlFile(self.file_path)
     self.setStaticPose()
