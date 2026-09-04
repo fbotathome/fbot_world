@@ -441,11 +441,10 @@ class PosePlugin(WorldPlugin):
   
   def getRoom(self, req: GetRoom.Request, res: GetRoom.Response):
     """
-    @brief: A service that returns the room and place name where the robot is, based on its current position.
-    The function checks if the pose is within any of the defined rooms and places in the YAML configuration.
-    @param req: The service request containing the robot's current pose.
-    @param res: The service response to populate with the room and place names.
-    @return Execution outcome (SUCCEED, ABORT).
+    @brief: A service that returns the room and object sub-area containing the pose provided in the request.
+    The function checks whether `req.pose.position` lies within any room polygon and then any object sub-area polygon.
+    @param req: The service request containing the pose to query.
+    @param res: The service response to populate with the room and object sub-area names.
     """
     pose = Pose()
     pose = req.pose
