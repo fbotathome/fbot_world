@@ -235,12 +235,15 @@ class PlacePoseWriter(Node):
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
 
+
         existing_data = yaml_io.load_ordered(self.yaml_path)
 
+        if 'places' not in existing_data:
+            existing_data['places'] = OrderedDict()
         if self.group_set not in existing_data:
-            existing_data[self.group_set] = OrderedDict()
+            existing_data['places'][self.group_set] = OrderedDict()
 
-        existing_data[self.group_set].update(self.poses[self.group_set])
+        existing_data['places'][self.group_set].update(self.poses[self.group_set])
         yaml_io.dump_ordered(existing_data, self.yaml_path)
 
         return

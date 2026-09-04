@@ -103,11 +103,13 @@ class PoseWriter (Node):
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
 
         existing_data = yaml_io.load_ordered(self.yaml_path)
+        if 'places' not in existing_data:
+            existing_data['places'] = OrderedDict()
 
-        if 'targets' not in existing_data:
-            existing_data['targets']= OrderedDict()
+        if 'targets' not in existing_data['places']:
+            existing_data['places']['targets']= OrderedDict()
 
-        existing_data['targets'].update(self.poses['targets'])
+        existing_data['places']['targets'].update(self.poses['targets'])
         yaml_io.dump_ordered(existing_data, self.yaml_path)
 
         return
