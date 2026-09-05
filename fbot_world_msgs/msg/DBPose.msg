@@ -1,2 +1,2 @@
-string label
-geometry_msgs/Pose pose
+string type
+string[] poses

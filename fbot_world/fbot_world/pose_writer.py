@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rclpy
-import yaml
 import os
 
 from rclpy.exceptions import ROSInterruptException
@@ -10,33 +9,14 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from collections import OrderedDict
 from rclpy.node import Node
 
+from fbot_world import yaml_io
+
 '''
 Save the current pose in the specified topic to a yaml file.
 Created by Gabriel Dorneles on 2024-10-06.
 Port to ROS2 by Vitor Anello on 2025-05-7.
 '''
 
-
-class OrderedDumper(yaml.SafeDumper):
-    '''
-    @brief Custom YAML dumper to handle OrderedDict.
-    '''
-    def represent_ordereddict(self, data):
-        return self.represent_dict(data.items())
-    
-class OrderedLoader(yaml.SafeLoader):
-    pass
-
-def construct_ordered_dict(loader, node):
-    '''
-    @brief Custom YAML loader to handle OrderedDict.
-    '''
-    return OrderedDict(loader.construct_pairs(node))
-
-OrderedLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-    construct_ordered_dict
-)
 
 class PoseWriter (Node):
     '''
@@ -117,28 +97,21 @@ class PoseWriter (Node):
         '''
         @brief Write the collected poses to a YAML file.
         '''
-        OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
-
         if os.path.exists(self.yaml_path):
             self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
-
-            with open(self.yaml_path, 'r') as yaml_file:
-                try:
-                    existing_data = yaml.load(yaml_file, Loader=OrderedLoader) or OrderedDict()
-                except yaml.YAMLError as e:
-                    self.get_logger().error(f"Error reading {self.yaml_file}: {e}")
-                    existing_data = OrderedDict()
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
-            existing_data = OrderedDict()
 
-        if 'targets' not in existing_data:
-            existing_data['targets']= OrderedDict()
+        existing_data = yaml_io.load_ordered(self.yaml_path)
+        if 'places' not in existing_data:
+            existing_data['places'] = OrderedDict()
 
-        existing_data['targets'].update(self.poses['targets'])
-        with open(self.yaml_path, 'w') as yaml_file:
-             yaml.dump(existing_data, yaml_file, default_flow_style=False, Dumper=OrderedDumper)
-             
+        if 'targets' not in existing_data['places']:
+            existing_data['places']['targets']= OrderedDict()
+
+        existing_data['places']['targets'].update(self.poses['targets'])
+        yaml_io.dump_ordered(existing_data, self.yaml_path)
+
         return
 
 

@@ -5,7 +5,6 @@ import re
 import threading
 
 import rclpy
-import yaml
 
 from collections import OrderedDict
 from geometry_msgs.msg import Pose
@@ -17,6 +16,8 @@ from rclpy.duration import Duration
 import tf2_ros
 
 from interbotix_xs_msgs.srv import TorqueEnable
+
+from fbot_world import yaml_io
 
 '''
 Save the current end-effector pose (read from TF, expressed in the map frame) to a
@@ -30,31 +31,6 @@ since it iterates arbitrary top-level groups; this node writes under the
 
 Created by Gabriel Dorneles on 2026-06-01.
 '''
-
-
-class OrderedDumper(yaml.SafeDumper):
-    '''
-    @brief Custom YAML dumper to handle OrderedDict.
-    '''
-    def represent_ordereddict(self, data):
-        return self.represent_dict(data.items())
-
-
-class OrderedLoader(yaml.SafeLoader):
-    pass
-
-
-def construct_ordered_dict(loader, node):
-    '''
-    @brief Custom YAML loader to handle OrderedDict.
-    '''
-    return OrderedDict(loader.construct_pairs(node))
-
-
-OrderedLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-    construct_ordered_dict
-)
 
 
 class PlacePoseWriter(Node):
@@ -254,27 +230,21 @@ class PlacePoseWriter(Node):
         @brief Write the collected poses to a YAML file, appending to the group if it
         already exists.
         '''
-        OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_ordereddict)
-
         if os.path.exists(self.yaml_path):
             self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
-
-            with open(self.yaml_path, 'r') as yaml_file:
-                try:
-                    existing_data = yaml.load(yaml_file, Loader=OrderedLoader) or OrderedDict()
-                except yaml.YAMLError as e:
-                    self.get_logger().error(f"Error reading {self.yaml_file}: {e}")
-                    existing_data = OrderedDict()
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
-            existing_data = OrderedDict()
 
+
+        existing_data = yaml_io.load_ordered(self.yaml_path)
+
+        if 'places' not in existing_data:
+            existing_data['places'] = OrderedDict()
         if self.group_set not in existing_data:
-            existing_data[self.group_set] = OrderedDict()
+            existing_data['places'][self.group_set] = OrderedDict()
 
-        existing_data[self.group_set].update(self.poses[self.group_set])
-        with open(self.yaml_path, 'w') as yaml_file:
-            yaml.dump(existing_data, yaml_file, default_flow_style=False, Dumper=OrderedDumper)
+        existing_data['places'][self.group_set].update(self.poses[self.group_set])
+        yaml_io.dump_ordered(existing_data, self.yaml_path)
 
         return
 

@@ -13,10 +13,13 @@ find_package(nav_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DBPose.msg"
   "msg/FBOTPoses.msg"
+  "msg/FBOTRooms.msg"
+  "msg/FBOTVertices.msg"
   "srv/GetKey.srv"
   "srv/GetPose.srv"
   "srv/GetPoseFromSet.srv"
   "srv/GetSets.srv"
+  "srv/GetRoom.srv"
   DEPENDENCIES std_msgs geometry_msgs sensor_msgs vision_msgs
 )
 
