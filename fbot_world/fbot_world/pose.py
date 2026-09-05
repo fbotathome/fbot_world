@@ -4,8 +4,9 @@ import rclpy
 import yaml
 import os
 import numpy as np
-from scripts.world_plugin import WorldPlugin
+from pathlib import Path
 from fbot_world import marker_utils
+from world_scripts.world_plugin import WorldPlugin
 from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, DBPose
 from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
 from geometry_msgs.msg import Pose, Vector3, Point
@@ -67,9 +68,12 @@ class PosePlugin(WorldPlugin):
     self.declareParameters()
     self.readParameters()
     ws_dir = os.path.abspath(os.path.join(get_package_share_directory('fbot_world'), '../../../..'))
-    self.file_path = os.path.join(ws_dir, "src", "fbot_world","fbot_world", "config", self.config_file_name + '.yaml')
-    self.loadTargets()
+    self.file_path = Path(os.path.join(ws_dir, "src", "fbot_world","fbot_world", "config", self.config_file_name + '.yaml')).resolve()
     self.get_logger().info(f"File name: {self.config_file_name}")
+    self.last_modification = 0.0
+    self.data_config = {}
+    self.verifyYamlFile()
+
 
     self.setStaticPose()
 
@@ -83,6 +87,7 @@ class PosePlugin(WorldPlugin):
     # Publish once after a short delay so RViz has time to subscribe
     self.create_timer(1.0, self._publish_debug_markers_once)
 
+    self.timer_checagem = self.create_timer(5.0, self.timerReadYamlFile)
     self.get_logger().info(f"Pose node started!!!")
 
   # ------------------------------------------------------------------
@@ -486,6 +491,46 @@ class PosePlugin(WorldPlugin):
   
   def ccw(self,A,B,C):
       return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+  
+  def verifyYamlFile(self):
+    """
+    @brief: Verifies if the YAML file has been modified and loads new configurations if it has.
+      This method checks the last modification time of the YAML file against a stored timestamp.
+      If the file has been modified since the last check, it reads the new data and updates the internal state.
+    """
+    if not self.file_path.exists():
+        self.get_logger().error(f'File not found: {self.file_path}')
+        return
+
+    try:
+        actual_modification_time = self.file_path.stat().st_mtime
+        if actual_modification_time != self.last_modification:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
+                new_data = yaml.safe_load(f)
+            
+            self.data_config = new_data
+            self.last_modification = actual_modification_time
+            self.get_logger().info('Yaml modified! New configurations loaded.')
+            self.applyNewConfigurations()
+
+    except Exception as e:
+        self.get_logger().error(f'Error occurred while reading or processing the YAML file: {e}')
+
+  def timerReadYamlFile(self):
+    """
+    @brief: Timer callback to periodically check for modifications in the YAML file.
+      This method is called at regular intervals (e.g., every 5 seconds.
+    """
+    self.verifyYamlFile()
+
+  def applyNewConfigurations(self):
+    """
+    @brief: Clear the redis database and applies new configurations loaded from the YAML file.
+    """
+    self.r.flushdb(asynchronous=True)
+    self.targets = readYamlFile(self.file_path)
+    self.setStaticPose()
+
 
 
 def main(args=None) -> None: 
