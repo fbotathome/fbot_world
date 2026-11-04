@@ -7,8 +7,8 @@ import numpy as np
 from pathlib import Path
 from fbot_world import marker_utils
 from world_scripts.world_plugin import WorldPlugin
-from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, DBPose
-from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom
+from fbot_world_msgs.msg import FBOTPoses, FBOTRooms, DBPose, FBOTVertices
+from fbot_world_msgs.srv import GetPose, GetPoseFromSet, GetSets, GetRoom, GetRoomsVertices
 from geometry_msgs.msg import Pose, Vector3, Point
 from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import Marker, MarkerArray
@@ -83,6 +83,7 @@ class PosePlugin(WorldPlugin):
     self.set_server = self.create_service(GetPoseFromSet, '/fbot_world/get_set', self.getPoseFromSet)
     self.sets_names = self.create_service(GetSets, '/fbot_world/get_groups_names', self.getGroupNames)
     self.room_server = self.create_service(GetRoom, '/fbot_world/get_room', self.getRoom)
+    self.rooms_vertices_server = self.create_service(GetRoomsVertices, '/fbot_world/get_rooms_vertices', self.getRoomsVertices)
 
     # Publish once after a short delay so RViz has time to subscribe
     self.create_timer(1.0, self._publish_debug_markers_once)
@@ -465,6 +466,54 @@ class PosePlugin(WorldPlugin):
           res.response = [room[0], 'None']
           return res
     res.response = ['None', 'None']
+    return res
+
+  def _toVertices(self, key: str, polygon) -> FBOTVertices:
+    """
+    @brief: Converts a list of [x, y] pairs from the YAML into an FBOTVertices message (z = 0).
+    @param key: The name to assign to the polygon.
+    @param polygon: A list of [x, y] vertices.
+    @return: A filled FBOTVertices message.
+    """
+    vertices = FBOTVertices()
+    vertices.key = key
+    for vertex in polygon or []:
+      vertices.points.append(Point(x=float(vertex[0]), y=float(vertex[1]), z=0.0))
+    return vertices
+
+  def getRoomsVertices(self, req: GetRoomsVertices.Request, res: GetRoomsVertices.Response):
+    """
+    @brief: A service that returns the room polygons and object sub-area polygons from the YAML file.
+    Room keys are the room names; object keys use the format 'room/object'.
+    Error codes:
+      - 0: Success
+      - 1: Requested room not found
+      - 2: Exception occurred
+    @param req: The service request. An empty room (or 'None') returns every room.
+    @param res: The service response to populate with room and object vertices.
+    @return: A filled GetRoomsVertices.Response object.
+    """
+    try:
+      rooms = self.targets.get('rooms') or {}
+      if req.room == '' or req.room == 'None':
+        selected = list(rooms.keys())
+      elif req.room in rooms:
+        selected = [req.room]
+      else:
+        self.get_logger().error("Room not found: " + str(req.room))
+        res.error = 1
+        return res
+      for room in selected:
+        room_data = rooms[room] or {}
+        res.rooms.append(self._toVertices(room, room_data.get('vertices')))
+        for obj, polygon in (room_data.get('objects') or {}).items():
+          res.objects.append(self._toVertices(room + '/' + obj, polygon))
+      res.error = 0
+    except Exception as e:
+      self.get_logger().error(f"Error in getRoomsVertices: {e}")
+      res.rooms = []
+      res.objects = []
+      res.error = 2
     return res
       
   def is_point_in_area(self, polygon, point) -> bool:

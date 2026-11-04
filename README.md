@@ -79,10 +79,14 @@ fbot_world/
 Loads a poses/rooms YAML file and serves it through the `/fbot_world/*` services
 (see the table below). It also publishes RViz markers of every room and object
 sub-area on `/fbot_world/debug_markers`, and answers "which room am I in?" queries
-via `/fbot_world/get_room`.
+via `/fbot_world/get_room`. Room and object polygons can be retrieved via
+`/fbot_world/get_rooms_vertices`.
 ```bash
 # Launch pose node
 ros2 launch fbot_world pose.launch.py config_file_name:=file_name_without_dot_yaml
+
+# Get the vertices of all rooms and objects (use room: 'kitchen' to filter)
+ros2 service call /fbot_world/get_rooms_vertices fbot_world_msgs/srv/GetRoomsVertices "{room: ''}"
 ```
 
 ### Pose Writer Node
@@ -137,6 +141,7 @@ ros2 run fbot_world room_writer
 | `/fbot_world/get_set` | [`GetPoseFromSet`](fbot_world_msgs/srv/GetPoseFromSet.srv) | Service callback to return all poses for a requested group name key |
 | `/fbot_world/get_groups_names` | [`GetSets`](fbot_world_msgs/srv/GetSets.srv) | Service callback that returns available pose groups and room metadata (poses/objects) from the YAML file |
 | `/fbot_world/get_room` | [`GetRoom`](fbot_world_msgs/srv/GetRoom.srv) | Service that returns the room and object sub-area containing the pose provided in the request (or "None") |
+| `/fbot_world/get_rooms_vertices` | [`GetRoomsVertices`](fbot_world_msgs/srv/GetRoomsVertices.srv) | Service that returns the polygon vertices of every room (or only the requested `room`) and of their object sub-areas (keys as `room/object`). Error codes: `0` success, `1` room not found, `2` exception |
 
 ---
 

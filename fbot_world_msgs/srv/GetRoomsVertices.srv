@@ -1,0 +1,5 @@
+string room
+---
+int32 error
+fbot_world_msgs/FBOTVertices[] rooms
+fbot_world_msgs/FBOTVertices[] objects
