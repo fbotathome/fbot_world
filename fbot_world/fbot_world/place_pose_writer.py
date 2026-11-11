@@ -15,7 +15,7 @@ from rclpy.duration import Duration
 
 import tf2_ros
 
-from interbotix_xs_msgs.srv import TorqueEnable
+from xarm.wrapper import XArmAPI
 
 from fbot_world import yaml_io
 
@@ -48,18 +48,16 @@ class PlacePoseWriter(Node):
         super().__init__(node_name='place_pose_writer')
 
         self.declare_parameter('reference_frame', 'map')
-        self.declare_parameter('ee_frame', 'wx200/ee_gripper_link')
+        self.declare_parameter('ee_frame', 'link_tcp')
         self.declare_parameter('group_set', 'place_poses')
-        # Torque is disabled on this joint group so the arm can be hand-guided to the
-        # desired place pose, then re-enabled before exiting.
-        self.declare_parameter('robot_name', 'wx200')
-        self.declare_parameter('torque_group', 'arm')
+        # The xArm is put in teaching (zero-gravity) mode so it can be hand-guided to
+        # the desired place pose, then returned to position mode before exiting.
+        self.declare_parameter('xarm_ip', '192.168.1.208')
 
         self.reference_frame = self.get_parameter('reference_frame').get_parameter_value().string_value
         self.ee_frame = self.get_parameter('ee_frame').get_parameter_value().string_value
         self.group_set = self.get_parameter('group_set').get_parameter_value().string_value
-        self.robot_name = self.get_parameter('robot_name').get_parameter_value().string_value
-        self.torque_group = self.get_parameter('torque_group').get_parameter_value().string_value
+        self.xarm_ip = self.get_parameter('xarm_ip').get_parameter_value().string_value
 
         self.poses = {self.group_set: {}}
 
@@ -77,8 +75,7 @@ class PlacePoseWriter(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        self.torque_service = f'/{self.robot_name}/torque_enable'
-        self.torque_client = self.create_client(TorqueEnable, self.torque_service)
+        self.arm = None
 
         # Spin in a background thread so the TF listener keeps filling the buffer and
         # service responses are processed while the main thread blocks on input().
@@ -119,64 +116,57 @@ class PlacePoseWriter(Node):
         pose.orientation = tf.transform.rotation
         return pose
 
-    def setTorque(self, enable: bool) -> bool:
+    def set_arm_mode(self, mode: int) -> bool:
         '''
-        @brief Enable or disable torque on the configured joint group via the
-        Interbotix TorqueEnable service, so the arm can be hand-guided.
-        @param enable: True to torque on, False to torque off.
-        @return True if the service call succeeded, False otherwise.
+        @brief Set the physical xArm control mode and ready state.
+        @param mode: 2 for teaching (zero-gravity) mode, 0 for position control mode.
+        @return True if the mode and state were set, False otherwise.
         '''
-        action = "Enabling" if enable else "Disabling"
-        if not self.torque_client.wait_for_service(timeout_sec=5.0):
+        if self.arm is None:
+            self.arm = XArmAPI(self.xarm_ip)
+        if not self.arm.connected:
+            self.get_logger().error(f"Could not connect to the xArm at {self.xarm_ip}.")
+            return False
+        if self.arm.has_err_warn:
             self.get_logger().error(
-                f"{action} torque failed: service '{self.torque_service}' unavailable."
+                f"xArm has an active error/warning (error_code={self.arm.error_code}, "
+                f"warn_code={self.arm.warn_code}). Clear it before changing mode."
             )
             return False
 
-        request = TorqueEnable.Request()
-        request.cmd_type = 'group'
-        request.name = self.torque_group
-        request.enable = enable
-
-        future = self.torque_client.call_async(request)
-
-        # The node spins in a background thread, so just wait for the future here.
-        start = self.get_clock().now()
-        while not future.done():
-            if (self.get_clock().now() - start) > Duration(seconds=5.0):
-                self.get_logger().error(f"{action} torque timed out.")
-                return False
-
-        if future.exception() is not None:
-            self.get_logger().error(f"{action} torque raised: {future.exception()}")
+        code = self.arm.set_mode(mode)
+        if code != 0:
+            self.get_logger().error(f"set_mode({mode}) failed with code {code}.")
+            return False
+        code = self.arm.set_state(0)  # Set to ready state
+        if code != 0:
+            self.get_logger().error(f"set_state(0) failed with code {code}.")
             return False
 
-        self.get_logger().info(
-            f"{action.replace('ing', 'ed')} torque on group '{self.torque_group}'."
-        )
+        self.get_logger().info(f"xArm set to mode {mode}.")
         return True
 
     def save_pose(self) -> None:
         '''
         @brief Interactively capture named end-effector place poses and persist them.
-        Torque is disabled while capturing (so the arm can be hand-guided) and always
-        re-enabled before returning.
+        The arm is in teaching mode while capturing (so it can be hand-guided) and is
+        always returned to position mode before returning.
         '''
-        # The wx200 has no gravity compensation: it will go limp and drop when
-        # torque is cut, so make the user support it first.
-        input(
-            "WARNING: torque is about to be DISABLED so you can hand-guide the arm. "
-            "Hold the arm to stop it from dropping, then press Enter..."
-        )
-        self.setTorque(False)
+        if not self.set_arm_mode(2):
+            self.get_logger().error("Could not enter teaching mode. Aborting.")
+            return
         try:
             self._capture_loop()
         finally:
-            self.setTorque(True)
+            if not self.set_arm_mode(0):
+                self.get_logger().error(
+                    "Failed to return the xArm to position mode. It may still be in "
+                    "teaching mode; set it manually before commanding the arm."
+                )
 
     def _capture_loop(self) -> None:
         '''
-        @brief The interactive capture loop, run with torque disabled.
+        @brief The interactive capture loop, run with the arm in teaching mode.
         '''
         while rclpy.ok():
             pose_name = input(
@@ -259,6 +249,8 @@ def main(args=None) -> None:
         pass
     finally:
         if saver is not None:
+            if saver.arm is not None:
+                saver.arm.disconnect()
             saver.destroy_node()
         rclpy.try_shutdown()
 
