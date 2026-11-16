@@ -204,27 +204,29 @@ class PosePlugin(WorldPlugin):
 
       # Sub-areas (objects) inside the room
       objects = room_data.get('objects', {})
-      for obj_idx, (obj_name, obj_vertices) in enumerate(objects.items()):
-        if not obj_vertices:
-          continue
-        obj_color = self.OBJECT_COLORS[obj_idx % len(self.OBJECT_COLORS)]
+      if objects: 
+      
+        for obj_idx, (obj_name, obj_vertices) in enumerate(objects.items()):
+          if not obj_vertices:
+            continue
+          obj_color = self.OBJECT_COLORS[obj_idx % len(self.OBJECT_COLORS)]
 
-        marker_array.markers.append(
-          self._polygon_to_fill_marker(obj_vertices, marker_id, f'room_{room_name}_objects', obj_color, z=0.03)
-        )
-        marker_id += 1
+          marker_array.markers.append(
+            self._polygon_to_fill_marker(obj_vertices, marker_id, f'room_{room_name}_objects', obj_color, z=0.03)
+          )
+          marker_id += 1
 
-        marker_array.markers.append(
-          self._polygon_to_line_strip_marker(obj_vertices, marker_id, f'room_{room_name}_objects', obj_color, z=0.04, line_width=0.04)
-        )
-        marker_id += 1
+          marker_array.markers.append(
+            self._polygon_to_line_strip_marker(obj_vertices, marker_id, f'room_{room_name}_objects', obj_color, z=0.04, line_width=0.04)
+          )
+          marker_id += 1
 
-        # Object label
-        cx, cy = self._centroid(obj_vertices)
-        marker_array.markers.append(
-          self._text_marker(f"{room_name}\n{obj_name}", (cx, cy), marker_id, f'room_{room_name}_objects', obj_color, z=0.25, text_size=0.18)
-        )
-        marker_id += 1
+          # Object label
+          cx, cy = self._centroid(obj_vertices)
+          marker_array.markers.append(
+            self._text_marker(f"{room_name}\n{obj_name}", (cx, cy), marker_id, f'room_{room_name}_objects', obj_color, z=0.25, text_size=0.18)
+          )
+          marker_id += 1
 
     self.marker_pub.publish(marker_array)
     self.get_logger().info(f"Published {len(marker_array.markers)} debug markers ({len(rooms)} rooms).")
@@ -252,6 +254,8 @@ class PosePlugin(WorldPlugin):
       }
     else:
       self.targets = content
+    if not self.targets.get('rooms'):
+      self.targets['rooms'] = {}
 
   def readPose(self, group_set: str, key: str):
     """
@@ -303,11 +307,17 @@ class PosePlugin(WorldPlugin):
       pass
     return size
 
-  def setStaticPose(self):
+  def setStaticPose(self, clear_old: bool = False):
     '''
     @brief: Stores all target poses as static entries in the Redis database.
+    @param: clear_old: delete the pose keys written before (pattern <group>/<id>/pose) in the
+      same MULTI/EXEC, so readers never see an empty set. Only this node's keys are removed;
+      other users of the same Redis (e.g. the face recognition index) are left untouched.
     '''
+    stale_keys = list(self.r.scan_iter(match='*/*/pose', count=500)) if clear_old else []
     with self.r.pipeline() as pipe:
+      if stale_keys:
+        pipe.delete(*stale_keys)
       self.get_logger().info(f"Setting static poses in Redis for targets: {self.targets['poses'].keys()}")
       for target in self.targets['poses'].keys():
         for p_id, pose in self.targets['poses'][target].items():
@@ -574,11 +584,11 @@ class PosePlugin(WorldPlugin):
 
   def applyNewConfigurations(self):
     """
-    @brief: Clear the redis database and applies new configurations loaded from the YAML file.
+    @brief: Replaces this node's pose keys in Redis with the configurations loaded from the YAML file.
+      Does NOT flush the database: it is shared with other nodes (face recognition index, etc.).
     """
-    self.r.flushdb(asynchronous=True)
-    self.targets = readYamlFile(self.file_path)
-    self.setStaticPose()
+    self.loadTargets()
+    self.setStaticPose(clear_old=True)
 
 
 
