@@ -43,16 +43,52 @@ OrderedLoader.add_constructor(
 def load_ordered(path: str) -> OrderedDict:
     '''
     @brief Load a YAML file as an OrderedDict.
-    @return The parsed mapping, or an empty OrderedDict if the file is missing,
-    empty or unparseable.
+    @return The parsed mapping, or an empty OrderedDict if the file is missing
+    or empty.
+    @raise yaml.YAMLError if the file cannot be parsed. Writers must not
+    overwrite such a file: it would erase its poses/rooms.
     '''
     if not os.path.exists(path):
         return OrderedDict()
     with open(path, 'r') as f:
-        try:
-            return yaml.load(f, Loader=OrderedLoader) or OrderedDict()
-        except yaml.YAMLError:
-            return OrderedDict()
+        return yaml.load(f, Loader=OrderedLoader) or OrderedDict()
+
+
+def merge_poses(data: OrderedDict, group: str, new_poses: dict) -> OrderedDict:
+    '''
+    @brief Merge poses into a config mapping using the layout read by pose.py:
+        poses: {<group>: {<name>: {px, py, pz, ox, oy, oz, ow}}}
+        rooms: {<room>: {...}}
+    'rooms' and any other top-level key are kept. Older layouts are moved under
+    'poses': groups at the top level (file without 'poses') and groups under
+    'places' (written by previous versions of the pose writers).
+    @param data: The mapping loaded from the YAML file (modified in place).
+    @param group: The pose group to write, e.g. 'targets'.
+    @param new_poses: {<name>: {px, ...}} to add or replace in that group.
+    @return The same mapping.
+    '''
+    if not isinstance(data.get('poses'), dict):
+        legacy_groups = [k for k, v in data.items()
+                         if k not in ('poses', 'rooms', 'places') and isinstance(v, dict)]
+        data['poses'] = OrderedDict((k, data.pop(k)) for k in legacy_groups)
+    poses = data['poses']
+
+    places = data.pop('places', None)
+    if isinstance(places, dict):
+        for legacy_group, legacy_poses in places.items():
+            if not isinstance(legacy_poses, dict):
+                continue
+            if not isinstance(poses.get(legacy_group), dict):
+                poses[legacy_group] = OrderedDict()
+            poses[legacy_group].update(legacy_poses)
+
+    if not isinstance(poses.get(group), dict):
+        poses[group] = OrderedDict()
+    poses[group].update(new_poses)
+
+    if not isinstance(data.get('rooms'), dict):
+        data['rooms'] = OrderedDict()
+    return data
 
 
 def dump_ordered(data, path: str) -> None:

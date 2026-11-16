@@ -2,12 +2,14 @@
 
 import rclpy
 import os
+import yaml
 
 from rclpy.exceptions import ROSInterruptException
 from rclpy.wait_for_message import wait_for_message
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from collections import OrderedDict
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
 from fbot_world import yaml_io
 
@@ -47,6 +49,8 @@ class PoseWriter (Node):
         self.yaml_path = self.config_path + '/' + self.yaml_file
         self.declare_parameter('~pose_topic', '/amcl_pose')
         self.pose_topic = self.get_parameter('~pose_topic').get_parameter_value().string_value
+        self.pose_qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                                   reliability=ReliabilityPolicy.RELIABLE)
 
     def save_pose(self) -> None:
         '''
@@ -54,10 +58,6 @@ class PoseWriter (Node):
         '''
 
         while rclpy.ok():
-            success, message = wait_for_message(msg_type=PoseWithCovarianceStamped, node=self, topic="/amcl_pose", time_to_wait=2.0)
-            current_pose = message.pose.pose if success else None
-
-
             self.get_logger().info("Ready to save a new pose.")
             pose_name = input("Move the robot to the desired pose and enter its name (e.g., 'garbage_1', 'exit'): ")
 
@@ -65,9 +65,14 @@ class PoseWriter (Node):
                 self.get_logger().warning("No name provided, skipping pose.")
                 continue
 
-                if current_pose is None:
-                    self.get_logger().warning("No pose received from topic yet.")
-                    continue
+            # Read the pose after the operator confirms, so it is the pose at the named spot.
+            # AMCL publishes only when the robot moves; transient_local returns its last (latched) pose.
+            success, message = wait_for_message(msg_type=PoseWithCovarianceStamped, node=self, topic=self.pose_topic,
+                                                qos_profile=self.pose_qos, time_to_wait=2.0)
+            if not success:
+                self.get_logger().warning(f"No pose received on {self.pose_topic}. Pose '{pose_name}' not saved.")
+                continue
+            current_pose = message.pose.pose
 
             self.poses['targets'][pose_name] = OrderedDict([
             ('px', current_pose.position.x),
@@ -84,9 +89,9 @@ class PoseWriter (Node):
             while True:
                 save_now = input("Do you want to add more poses? (y/n): ").lower()
                 if save_now == 'n':
-                    self.write_to_yaml()
-                    self.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
-                    break
+                    if self.write_to_yaml():
+                        self.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
+                    return
 
                 elif save_now == 'y':
                     break
@@ -95,24 +100,24 @@ class PoseWriter (Node):
 
     def write_to_yaml(self):
         '''
-        @brief Write the collected poses to a YAML file.
+        @brief Merge the collected poses into poses/targets of the YAML file,
+        keeping its rooms and other groups.
+        @return False if the existing file could not be parsed (nothing written).
         '''
         if os.path.exists(self.yaml_path):
             self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
 
-        existing_data = yaml_io.load_ordered(self.yaml_path)
-        if 'places' not in existing_data:
-            existing_data['places'] = OrderedDict()
+        try:
+            existing_data = yaml_io.load_ordered(self.yaml_path)
+        except yaml.YAMLError as e:
+            self.get_logger().error(f"Could not parse {self.yaml_path}: {e}. File left untouched.")
+            return False
 
-        if 'targets' not in existing_data['places']:
-            existing_data['places']['targets']= OrderedDict()
-
-        existing_data['places']['targets'].update(self.poses['targets'])
+        yaml_io.merge_poses(existing_data, 'targets', self.poses['targets'])
         yaml_io.dump_ordered(existing_data, self.yaml_path)
-
-        return
+        return True
 
 
 def main(args=None) -> None:

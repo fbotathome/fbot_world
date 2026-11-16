@@ -5,6 +5,7 @@ import re
 import threading
 
 import rclpy
+import yaml
 
 from collections import OrderedDict
 from rclpy.exceptions import ROSInterruptException
@@ -313,12 +314,12 @@ class RoomWriter(Node):
             )
 
         if self.completed_rooms:
-            self.write_to_yaml()
-            self.get_logger().info(f"Rooms saved to {self.yaml_file}. Shutting down node.")
+            if self.write_to_yaml():
+                self.get_logger().info(f"Rooms saved to {self.yaml_file}. Shutting down node.")
         else:
             self.get_logger().info("No rooms captured. Nothing written.")
 
-    def write_to_yaml(self) -> None:
+    def write_to_yaml(self) -> bool:
         '''
         @brief Merge the captured rooms into the YAML file's 'rooms' section,
         preserving the existing 'poses' section and any other top-level keys.
@@ -328,7 +329,11 @@ class RoomWriter(Node):
         else:
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
 
-        existing_data = yaml_io.load_ordered(self.yaml_path)
+        try:
+            existing_data = yaml_io.load_ordered(self.yaml_path)
+        except yaml.YAMLError as e:
+            self.get_logger().error(f"Could not parse {self.yaml_path}: {e}. File left untouched.")
+            return False
 
         rooms = existing_data.get('rooms')
         if not isinstance(rooms, (dict, OrderedDict)):
@@ -337,6 +342,7 @@ class RoomWriter(Node):
         existing_data['rooms'] = rooms
 
         yaml_io.dump_ordered(existing_data, self.yaml_path)
+        return True
 
 
 def main(args=None) -> None:

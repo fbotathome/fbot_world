@@ -25,9 +25,8 @@ yaml file, so fixed "place" locations such as shelves can be authored by moving 
 arm to the desired drop pose and pressing Enter.
 
 Companion to pose_writer.py (which saves the robot base pose from /amcl_pose). The
-saved poses are served, unchanged, by the existing PosePlugin (/fbot_world/get_pose)
-since it iterates arbitrary top-level groups; this node writes under the
-'place_poses' group by default.
+saved poses are served by the PosePlugin (/fbot_world/get_pose) like any other
+group under 'poses:'; this node writes the 'place_poses' group by default.
 
 Created by Gabriel Dorneles on 2026-06-01.
 '''
@@ -64,7 +63,7 @@ class PlacePoseWriter(Node):
         self.poses = {self.group_set: {}}
 
         ws_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../.."))
-        self.config_path = os.path.join(ws_dir, "src", "fbot_world", "fbot_world_bringup", "config")
+        self.config_path = os.path.join(ws_dir, "src", "fbot_world", "fbot_world", "config")
 
         while True:
             self.yaml_file = input("Enter the name of the file to save the poses (e.g., 'place_poses.yaml'): ")
@@ -217,8 +216,8 @@ class PlacePoseWriter(Node):
             while True:
                 save_now = input("Do you want to add more poses? (y/n): ").lower()
                 if save_now == 'n':
-                    self.write_to_yaml()
-                    self.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
+                    if self.write_to_yaml():
+                        self.get_logger().info(f"Poses saved to {self.yaml_file}. Shutting down node.")
                     return
                 elif save_now == 'y':
                     break
@@ -227,8 +226,9 @@ class PlacePoseWriter(Node):
 
     def write_to_yaml(self):
         '''
-        @brief Write the collected poses to a YAML file, appending to the group if it
-        already exists.
+        @brief Merge the collected poses into poses/<group_set> of the YAML file,
+        keeping its rooms and other groups.
+        @return False if the existing file could not be parsed (nothing written).
         '''
         if os.path.exists(self.yaml_path):
             self.get_logger().info(f"{self.yaml_file} already exists. The new poses will be appended to the existing data.")
@@ -236,17 +236,15 @@ class PlacePoseWriter(Node):
             self.get_logger().info(f"{self.yaml_file} does not exist. Creating a new file.")
 
 
-        existing_data = yaml_io.load_ordered(self.yaml_path)
+        try:
+            existing_data = yaml_io.load_ordered(self.yaml_path)
+        except yaml.YAMLError as e:
+            self.get_logger().error(f"Could not parse {self.yaml_path}: {e}. File left untouched.")
+            return False
 
-        if 'places' not in existing_data:
-            existing_data['places'] = OrderedDict()
-        if self.group_set not in existing_data:
-            existing_data['places'][self.group_set] = OrderedDict()
-
-        existing_data['places'][self.group_set].update(self.poses[self.group_set])
+        yaml_io.merge_poses(existing_data, self.group_set, self.poses[self.group_set])
         yaml_io.dump_ordered(existing_data, self.yaml_path)
-
-        return
+        return True
 
 
 def main(args=None) -> None:
