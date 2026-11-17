@@ -51,7 +51,7 @@ class PlacePoseWriter(Node):
         self.declare_parameter('group_set', 'place_poses')
         # The xArm is put in teaching (zero-gravity) mode so it can be hand-guided to
         # the desired place pose, then returned to position mode before exiting.
-        self.declare_parameter('xarm_ip', '192.168.1.208')
+        self.declare_parameter('xarm_ip', '192.168.4.208')
 
         self.reference_frame = self.get_parameter('reference_frame').get_parameter_value().string_value
         self.ee_frame = self.get_parameter('ee_frame').get_parameter_value().string_value
@@ -60,8 +60,8 @@ class PlacePoseWriter(Node):
 
         self.poses = {self.group_set: {}}
 
-        ws_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../.."))
-        self.config_path = os.path.join(ws_dir, "src", "fbot_world", "fbot_world", "config")
+        ws_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
+        self.config_path = os.path.join(ws_dir, "src", "fbot_world","fbot_world","config")
 
         while True:
             self.yaml_file = input("Enter the name of the file to save the poses (e.g., 'place_poses.yaml'): ")
