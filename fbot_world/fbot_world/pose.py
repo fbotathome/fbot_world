@@ -458,23 +458,22 @@ class PosePlugin(WorldPlugin):
   def getRoom(self, req: GetRoom.Request, res: GetRoom.Response):
     """
     @brief: A service that returns the room and object sub-area containing the pose provided in the request.
-    The function checks whether `req.pose.position` lies within any room polygon and then any object sub-area polygon.
+    The object sub-areas are checked first (an area drawn partly outside its room polygon, e.g. a table
+    against the wall, still answers [room, area]), then the room polygons ([room, 'None']).
     @param req: The service request containing the pose to query.
     @param res: The service response to populate with the room and object sub-area names.
     """
-    pose = Pose()
-    pose = req.pose
-    for room in self.targets['rooms'].items():
-      polygon = np.array(room[1]['vertices'],dtype= np.float32)
-      self.itens_points = pose.position
-      if self.is_point_in_area(polygon, [self.itens_points.x, self.itens_points.y]):
-          for place in room[1]['objects'].items():
-            subpolygon = np.array(place[1],dtype= np.float32)
-            if self.is_point_in_area(subpolygon, [self.itens_points.x, self.itens_points.y]):
-              res.response = [room[0], place[0]]
-              return res
-          res.response = [room[0], 'None']
+    point = [req.pose.position.x, req.pose.position.y]
+    rooms = self.targets.get('rooms') or {}
+    for room_name, room_data in rooms.items():
+      for place_name, place_vertices in (room_data.get('objects') or {}).items():
+        if self.is_point_in_area(np.array(place_vertices, dtype=np.float32), point):
+          res.response = [room_name, place_name]
           return res
+    for room_name, room_data in rooms.items():
+      if self.is_point_in_area(np.array(room_data['vertices'], dtype=np.float32), point):
+        res.response = [room_name, 'None']
+        return res
     res.response = ['None', 'None']
     return res
 
