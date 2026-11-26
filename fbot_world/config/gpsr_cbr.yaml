@@ -252,6 +252,10 @@ rooms:
   living_room:
     poses:
     - sofa
+    - armchair
+    - tv_stand
+    - dining_table
+    - shelf
     vertices:
     - - -5.427877426147461
       - -0.23177075386047363
@@ -268,7 +272,11 @@ rooms:
     objects: {}
   kitchen:
     poses:
-    - 'kitchen_table:'
+    - kitchen_table
+    - dishwasher
+    - refrigerator
+    - kitchen_trash_bin
+    - sink
     vertices:
     - - 5.909136772155762
       - -2.5713043212890625
@@ -284,6 +292,8 @@ rooms:
   laundry:
     poses:
     - laundry_basket
+    - ironing_board
+    - washing_machine
     vertices:
     - - 3.7585813999176025
       - -4.735815525054932
